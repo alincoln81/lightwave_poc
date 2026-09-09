@@ -10,7 +10,8 @@ import {
     lw_showWaveComplete,
     lw_setCountdownSeconds,
 } from './lw_countdown.js';
-import { lw_torchConfigure, lw_torchSetGoActive, lw_torchOff } from './lw_torch.js';
+import { lw_torchConfigure, lw_torchSetGoActive, lw_torchSetRaised, lw_torchOff } from './lw_torch.js';
+import { lw_getPose } from './lw_pose.js';
 
 let socketRef = null;
 let mySection = null;
@@ -87,6 +88,7 @@ async function handleCue(cue) {
     const untilGo = Math.max(0, localGo - Date.now());
     goTimer = setTimeout(async () => {
         goTimer = null;
+        await lw_torchSetRaised(lw_getPose() === 'raised');
         await lw_torchSetGoActive(true);
         const windowMs = Number.isFinite(torchMax) ? torchMax : 2000;
         endTimer = setTimeout(() => {

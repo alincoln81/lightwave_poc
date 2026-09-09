@@ -531,6 +531,7 @@ Producer Stop / mode default → lw_wave-stop / lw_mode.stop → torch off
 | Join leaves torch on (`startTorchFlow`) | After Lightwave join, `setTorch(false)` and hide `#info-text` | Owner request after C | Torch stays off until GO + raise (or countdown-only mode) |
 | After GO, overlay returns to waiting | Overlay shows **Lower your Phone** then **Wave Complete** | Owner request after C | Looping returns to waiting before the next countdown |
 | Fixed pose thresholds | Producer raise/lower sensitivity 1–10; default raise 8 / lower 2 | Owner request after C | Subtle raise, extreme lower |
+| Orientation enter/exit hysteresis | Raise = sustained camera-end (portrait top) lift; lower = sustained downward drop only. Orientation can enter raised, never exit | Flicker while barely moving; lower was too sensitive | Torch stays on until a real drop; already-raised phones light at GO |
 | Torch off on lower | Optional `lw_offOnlyAtMax` ignores lowering until torch max | Owner request after C | Checkbox on Lightwave tab |
 | Single pass wave | Optional `lw_loop` restarts the occupied-section pass after a gap | Owner request after C | Stop Wave ends the loop |
 | Settings update always calls `lw_start` | If already running, only re-apply timing/sensitivity | Live slider changes must not reset overlay or torch | Pose thresholds update without interrupting a pass |
@@ -785,3 +786,4 @@ Producer Stop / mode default → lw_wave-stop / lw_mode.stop → torch off
 | CL-006 | 2026-09-09 | edit | C | Torch off until raise; hide joined copy; producer torch-trigger + occupancy/active section; Lightwave as its own tab | Amber | — |
 | CL-007 | 2026-09-09 | edit | C | After the GO window, participant overlay shows “Lower your Phone” then returns to waiting | Amber | — |
 | CL-008 | 2026-09-09 | edit | C | Raise/lower sensitivity, off-only-at-max, Wave Complete, looping wave | Amber | — |
+| CL-009 | 2026-09-09 | edit | C | Motion-based raise/lower: short top-up lift vs long drop; sync pose at GO | Amber | — |

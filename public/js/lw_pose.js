@@ -1,7 +1,7 @@
 /**
- * Lightwave pose classifier: eye-level / lowered vs arm-raised (overhead).
- * Accelerometer cannot measure height; raised is inferred from orientation
- * (phone inverted or torch pointed upward — typical stadium flashlight pose).
+ * Lightwave pose: raised when the camera end (portrait top) lifts
+ * upward; lowered when the charging-port end / phone body drops down.
+ * Exit is motion-only so orientation wobble cannot flicker the torch.
  */
 
 const MIN_G = 6;
@@ -9,11 +9,16 @@ const DEFAULT_RAISE_SENSITIVITY = 8;
 const DEFAULT_LOWER_SENSITIVITY = 2;
 const HEARTBEAT_MS = 2000;
 const NO_SAMPLE_MS = 3000;
+const GRAVITY_TAU_SEC = 0.22;
+const TRAVEL_DECAY_TAU_SEC = 0.12;
+const MAX_DT_SEC = 0.05;
+const MIN_DT_SEC = 0.008;
+const DEADZONE_MS2 = 0.45;
 
 let listening = false;
 let pose = 'lowered';
 let sampleCount = 0;
-let lastMetrics = { angleDeg: 0, torchUp: 0, ok: false };
+let lastMetrics = { angleDeg: 0, torchUp: 0, ok: false, raiseTravel: 0, lowerTravel: 0 };
 let onChange = null;
 let onFirstSample = null;
 let onHeartbeat = null;
@@ -22,6 +27,8 @@ let motionHandler = null;
 let heartbeatTimer = null;
 let noSampleTimer = null;
 let liveThresholds = null;
+let tracker = null;
+let lastSampleAt = 0;
 
 function clampSensitivity(value, fallback) {
     const n = Number(value);
@@ -34,9 +41,10 @@ function lerp(a, b, t) {
 }
 
 /**
- * Map 1–10 producer sliders to enter/exit thresholds.
- * Higher raise = easier / more subtle to turn on.
- * Higher lower = easier to turn off; low = must drop almost upright.
+ * Map 1–10 producer sliders to raise/lower gesture thresholds.
+ * Higher raise = shorter upward travel to turn on.
+ * Higher lower = shorter downward travel to turn off.
+ * Lower-default 2 always needs more travel than raise-default 8.
  * @param {number} raiseSensitivity
  * @param {number} lowerSensitivity
  */
@@ -48,8 +56,13 @@ export function lw_thresholdsFromSensitivity(raiseSensitivity, lowerSensitivity)
     return {
         enterAngleDeg: lerp(82, 18, tRaise),
         enterTorchUp: lerp(0.5, 0.06, tRaise),
-        exitAngleDeg: lerp(8, 48, tLower),
-        exitTorchUp: lerp(0.06, 0.28, tLower),
+        raiseAccel: lerp(2.4, 0.7, tRaise),
+        raiseTravel: lerp(0.55, 0.12, tRaise),
+        raiseHoldMs: lerp(140, 40, tRaise),
+        lowerAccel: lerp(2.8, 1.1, tLower),
+        lowerTravel: lerp(1.15, 0.28, tLower),
+        lowerHoldMs: lerp(280, 80, tLower),
+        orientConfirmMs: lerp(220, 70, tRaise),
     };
 }
 
@@ -79,24 +92,185 @@ export function lw_poseMetrics({ gx, gy, gz }) {
 }
 
 /**
- * Classify a single sample. Pass previous pose for hysteresis.
+ * Portrait camera-end already pointing up / phone inverted.
+ * Used only to enter raised (people who lifted before GO), never to exit.
+ * @param {{ gx: number, gy: number, gz: number }} g
+ * @param {object} [thresholds]
+ * @returns {boolean}
+ */
+export function lw_orientationLooksRaised(g, thresholds = liveThresholds) {
+    const { angleDeg, torchUp, ok } = lw_poseMetrics(g);
+    if (!ok) return false;
+    const enterAngle = Number(thresholds?.enterAngleDeg);
+    const enterTorch = Number(thresholds?.enterTorchUp);
+    return angleDeg > enterAngle || torchUp > enterTorch;
+}
+
+/**
+ * @returns {{
+ *   pose: 'raised'|'lowered',
+ *   gravX: number, gravY: number, gravZ: number,
+ *   raiseTravel: number, lowerTravel: number,
+ *   raiseHoldMs: number, lowerHoldMs: number, orientHoldMs: number,
+ *   gravReady: boolean,
+ * }}
+ */
+export function lw_createPoseState() {
+    return {
+        pose: 'lowered',
+        gravX: 0,
+        gravY: -9.8,
+        gravZ: 0,
+        raiseTravel: 0,
+        lowerTravel: 0,
+        raiseHoldMs: 0,
+        lowerHoldMs: 0,
+        orientHoldMs: 0,
+        gravReady: false,
+    };
+}
+
+function decayTravel(value, dtSec) {
+    return value * Math.exp(-dtSec / TRAVEL_DECAY_TAU_SEC);
+}
+
+function finiteAccel(value) {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+}
+
+function linearFromSample(sample, state) {
+    const residual = {
+        x: (Number(sample.gx) || 0) - state.gravX,
+        y: (Number(sample.gy) || 0) - state.gravY,
+        z: (Number(sample.gz) || 0) - state.gravZ,
+    };
+    const ax = finiteAccel(sample.ax);
+    const ay = finiteAccel(sample.ay);
+    const az = finiteAccel(sample.az);
+    if (ax === null || ay === null || az === null) return residual;
+    const linMag = Math.hypot(ax, ay, az);
+    const resMag = Math.hypot(residual.x, residual.y, residual.z);
+    if (linMag >= 0.2 || resMag < 0.35) {
+        return { x: ax, y: ay, z: az };
+    }
+    return residual;
+}
+
+function updateGravity(state, sample, dtSec) {
+    const gx = Number(sample.gx);
+    const gy = Number(sample.gy);
+    const gz = Number(sample.gz);
+    if (!Number.isFinite(gx) || !Number.isFinite(gy) || !Number.isFinite(gz)) return;
+    if (!state.gravReady) {
+        state.gravX = gx;
+        state.gravY = gy;
+        state.gravZ = gz;
+        state.gravReady = true;
+        return;
+    }
+    const alpha = 1 - Math.exp(-dtSec / GRAVITY_TAU_SEC);
+    state.gravX += alpha * (gx - state.gravX);
+    state.gravY += alpha * (gy - state.gravY);
+    state.gravZ += alpha * (gz - state.gravZ);
+}
+
+/**
+ * World-up linear accel, plus extra when the portrait top (camera) lifts.
+ * Positive = going up. Negative = coming down.
+ */
+function worldUpAccel(lin, state) {
+    const mag = Math.hypot(state.gravX, state.gravY, state.gravZ);
+    if (!mag) return 0;
+    const upX = -state.gravX / mag;
+    const upY = -state.gravY / mag;
+    const upZ = -state.gravZ / mag;
+    const upA = lin.x * upX + lin.y * upY + lin.z * upZ;
+    const topAlongUp = Math.max(0, upY) * lin.y;
+    return upA + 0.35 * Math.max(0, topAlongUp);
+}
+
+/**
+ * Advance the pose tracker by one motion sample.
+ * Raised only after a short upward camera-end lift (or a held raised posture).
+ * Lowered only after a longer downward drop — not from tilt noise.
+ * @param {ReturnType<typeof lw_createPoseState>} state
+ * @param {{ gx: number, gy: number, gz: number, ax?: number, ay?: number, az?: number, dtSec?: number }} sample
+ * @param {object} [thresholds]
+ * @returns {'raised'|'lowered'}
+ */
+export function lw_advancePose(state, sample, thresholds = liveThresholds) {
+    const dtSec = Math.min(MAX_DT_SEC, Math.max(MIN_DT_SEC, Number(sample?.dtSec) || 1 / 60));
+    updateGravity(state, sample, dtSec);
+    const lin = linearFromSample(sample, state);
+    const upA = worldUpAccel(lin, state);
+    const raiseA = upA;
+    const lowerA = -upA;
+    const nowRaised = state.pose === 'raised';
+
+    if (!nowRaised) {
+        state.lowerTravel = 0;
+        state.lowerHoldMs = 0;
+        if (raiseA > thresholds.raiseAccel && raiseA > DEADZONE_MS2) {
+            state.raiseTravel += raiseA * dtSec;
+            state.raiseHoldMs += dtSec * 1000;
+        } else {
+            state.raiseTravel = decayTravel(state.raiseTravel, dtSec);
+            state.raiseHoldMs = 0;
+        }
+        const looksUp = lw_orientationLooksRaised({
+            gx: sample.gx,
+            gy: sample.gy,
+            gz: sample.gz,
+        }, thresholds);
+        if (looksUp) {
+            state.orientHoldMs += dtSec * 1000;
+        } else {
+            state.orientHoldMs = 0;
+        }
+        const lifted = state.raiseTravel >= thresholds.raiseTravel
+            && state.raiseHoldMs >= thresholds.raiseHoldMs;
+        const alreadyUp = state.orientHoldMs >= thresholds.orientConfirmMs;
+        if (lifted || alreadyUp) {
+            state.pose = 'raised';
+            state.raiseTravel = 0;
+            state.raiseHoldMs = 0;
+            state.orientHoldMs = 0;
+            state.lowerTravel = 0;
+            state.lowerHoldMs = 0;
+        }
+        return state.pose;
+    }
+
+    state.raiseTravel = 0;
+    state.raiseHoldMs = 0;
+    state.orientHoldMs = 0;
+    if (lowerA > thresholds.lowerAccel && lowerA > DEADZONE_MS2) {
+        state.lowerTravel += lowerA * dtSec;
+        state.lowerHoldMs += dtSec * 1000;
+    } else {
+        state.lowerTravel = decayTravel(state.lowerTravel, dtSec);
+        state.lowerHoldMs = 0;
+    }
+    if (state.lowerTravel >= thresholds.lowerTravel && state.lowerHoldMs >= thresholds.lowerHoldMs) {
+        state.pose = 'lowered';
+        state.lowerTravel = 0;
+        state.lowerHoldMs = 0;
+    }
+    return state.pose;
+}
+
+/**
+ * Snapshot orientation helper (enter-only). Live torch uses {@link lw_advancePose}.
  * @param {{ gx: number, gy: number, gz: number }} g
  * @param {'raised'|'lowered'} previous
  * @returns {'raised'|'lowered'|'unknown'}
  */
 export function lw_classifyPose(g, previous = 'lowered', thresholds = liveThresholds) {
-    const { angleDeg, torchUp, ok } = lw_poseMetrics(g);
+    const { ok } = lw_poseMetrics(g);
     if (!ok) return 'unknown';
-    const enterAngle = Number(thresholds?.enterAngleDeg);
-    const exitAngle = Number(thresholds?.exitAngleDeg);
-    const enterTorch = Number(thresholds?.enterTorchUp);
-    const exitTorch = Number(thresholds?.exitTorchUp);
-    if (previous === 'raised') {
-        if (angleDeg < exitAngle && torchUp < exitTorch) return 'lowered';
-        return 'raised';
-    }
-    if (angleDeg > enterAngle || torchUp > enterTorch) return 'raised';
-    return 'lowered';
+    if (previous === 'raised') return 'raised';
+    return lw_orientationLooksRaised(g, thresholds) ? 'raised' : 'lowered';
 }
 
 export function lw_needsMotionPermission() {
@@ -110,26 +284,22 @@ export function lw_needsMotionPermission() {
  */
 export async function lw_requestMotionPermission() {
     if (typeof DeviceMotionEvent === 'undefined') return 'unsupported';
-    if (typeof DeviceMotionEvent.requestPermission !== 'function') return 'granted';
-    try {
-        const result = await DeviceMotionEvent.requestPermission();
-        if (result === 'granted') {
-            if (typeof DeviceOrientationEvent !== 'undefined'
-                && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                try { await DeviceOrientationEvent.requestPermission(); } catch { /* optional */ }
+    if (typeof DeviceMotionEvent.requestPermission === 'function') {
+        try {
+            const result = await DeviceMotionEvent.requestPermission();
+            if (result === 'granted') {
+                if (typeof DeviceOrientationEvent !== 'undefined'
+                    && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                    try { await DeviceOrientationEvent.requestPermission(); } catch { /* optional */ }
+                }
+                return 'granted';
             }
-            return 'granted';
+            return 'denied';
+        } catch {
+            return 'denied';
         }
-        return 'denied';
-    } catch {
-        return 'denied';
     }
-}
-
-function gravityFromEvent(event) {
-    const g = event.accelerationIncludingGravity;
-    if (!g) return null;
-    return { gx: g.x, gy: g.y, gz: g.z };
+    return 'granted';
 }
 
 function bindReporter(options = {}) {
@@ -145,6 +315,8 @@ function reporterSnapshot() {
         pose,
         angleDeg: lastMetrics.angleDeg,
         torchUp: lastMetrics.torchUp,
+        raiseTravel: lastMetrics.raiseTravel,
+        lowerTravel: lastMetrics.lowerTravel,
     };
 }
 
@@ -159,6 +331,14 @@ function clearReporterTimers() {
     }
 }
 
+function resetLiveTracker() {
+    tracker = lw_createPoseState();
+    pose = 'lowered';
+    sampleCount = 0;
+    lastSampleAt = 0;
+    lastMetrics = { angleDeg: 0, torchUp: 0, ok: false, raiseTravel: 0, lowerTravel: 0 };
+}
+
 /**
  * @param {{
  *   onPose?: (pose: 'raised'|'lowered') => void,
@@ -170,19 +350,37 @@ function clearReporterTimers() {
 export function lw_poseStart(options = {}) {
     bindReporter(options);
     if (listening) return;
-    pose = 'lowered';
-    sampleCount = 0;
-    lastMetrics = { angleDeg: 0, torchUp: 0, ok: false };
+    resetLiveTracker();
     motionHandler = (event) => {
-        const g = gravityFromEvent(event);
-        if (!g) return;
-        lastMetrics = lw_poseMetrics(g);
+        const inc = event.accelerationIncludingGravity;
+        if (!inc) return;
+        const now = Date.now();
+        const dtSec = lastSampleAt
+            ? Math.min(MAX_DT_SEC, Math.max(MIN_DT_SEC, (now - lastSampleAt) / 1000))
+            : 1 / 60;
+        lastSampleAt = now;
+        const lin = event.acceleration;
+        const sample = {
+            gx: inc.x,
+            gy: inc.y,
+            gz: inc.z,
+            ax: lin ? lin.x : undefined,
+            ay: lin ? lin.y : undefined,
+            az: lin ? lin.z : undefined,
+            dtSec,
+        };
+        const metrics = lw_poseMetrics({ gx: inc.x, gy: inc.y, gz: inc.z });
+        const next = lw_advancePose(tracker, sample, liveThresholds);
+        lastMetrics = {
+            ...metrics,
+            raiseTravel: tracker.raiseTravel,
+            lowerTravel: tracker.lowerTravel,
+        };
         sampleCount += 1;
         if (sampleCount === 1 && onFirstSample) {
             onFirstSample({ metrics: lastMetrics, pose });
         }
-        const next = lw_classifyPose(g, pose);
-        if (next === 'unknown' || next === pose) return;
+        if (next === pose) return;
         pose = next;
         if (onChange) onChange(pose);
     };
@@ -208,9 +406,7 @@ export function lw_poseStop() {
     onHeartbeat = null;
     onNoSample = null;
     listening = false;
-    pose = 'lowered';
-    sampleCount = 0;
-    lastMetrics = { angleDeg: 0, torchUp: 0, ok: false };
+    resetLiveTracker();
 }
 
 export function lw_getPose() {
