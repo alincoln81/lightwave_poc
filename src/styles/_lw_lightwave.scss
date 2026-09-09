@@ -1,0 +1,96 @@
+/* Lightwave participant overlay and producer card */
+
+#lw_overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 20px;
+    box-sizing: border-box;
+    background: rgba(0, 0, 0, 0.55);
+    color: #ffffff;
+    text-align: center;
+    pointer-events: auto;
+}
+
+#lw_overlay-text {
+    margin: 0 0 16px;
+    font-size: clamp(2rem, 8vw, 4rem);
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: 0.02em;
+}
+
+#lw_section-form {
+    display: none;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    width: min(360px, 100%);
+}
+
+#lw_section-form label {
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+#lw_section-input {
+    text-align: center;
+    font-size: 1.25rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+#lw_section-error {
+    margin: 0;
+    color: #fec651;
+    font-size: 0.9rem;
+}
+
+#lw_section-submit,
+#lw_enable-motion {
+    justify-content: center;
+}
+
+#lw_enable-motion {
+    display: none;
+    margin-top: 12px;
+}
+
+#lw_card .lw_mode-row,
+#lw_card .lw_timing-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+#lw_card .lw_actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 16px 0;
+}
+
+#lw_occupancy {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+#lw_occupancy li {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+#dj-container.lw_programs-disabled,
+#custom-programs.lw_programs-disabled {
+    opacity: 0.45;
+    pointer-events: none;
+}

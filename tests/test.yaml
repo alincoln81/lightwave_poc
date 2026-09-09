@@ -1,0 +1,41 @@
+config:
+  target: https://vixi-lightshow-dev.onrender.com/ # https://lightshow.vs2-uswest2-prod.vixisuite.cloud # "https://lightshow.vixisuite.thefamousgroup.com/" #"http://localhost:3000"
+  socketio:
+    transports: ['websocket']
+  engines:
+    socketio:
+      transports: ["websocket"]
+      options:
+        pingInterval: 20000
+        pingTimeout: 600000
+
+  phases:
+    - name: ramp-up-phase-1
+      arrivalCount: 8000   # first batch
+      duration: 60         # over 1 minute
+
+    - name: ramp-up-phase-2
+      arrivalCount: 2000    # second batch
+      duration: 240        # over 4 minutes
+
+  processor: "processor.js"
+  debug: true
+  verbose: true
+
+scenarios:
+  - name: light-show-scenario
+    engine: socketio
+    flow:
+      - think: 1
+      - emit: 
+          channel: "test-user-connected"
+      - think: 4
+      - emit: 
+          channel: "test-torch-connected"
+      - think: 1
+      - loop:
+          - emit:
+              channel: "load-test:ping"
+          - think: 5
+        count: 60
+ 

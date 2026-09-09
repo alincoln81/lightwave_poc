@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vixi Light Show - User</title>
+    <link rel="icon" type="image/png" href="/assets/images/favicon.png">
+
+    <!-- UIkit CSS -->
+    <link rel="stylesheet" href="/vendor/uikit/css/uikit.min.css" />
+
+    <!-- MDI Icons -->
+    <link rel="stylesheet" href="/vendor/mdi/css/materialdesignicons.min.css">
+
+    <!-- Google Fonts - Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body id="background-container" class="user-page uk-flex uk-flex-center uk-flex-column uk-flex-middle">
+
+    <!-- Photo capture flash: 0.2s white flash before share (controlled by recording.js) -->
+    <div id="photo-flash-overlay" aria-hidden="true" style="position: fixed; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 9999;"></div>
+
+    <!-- Landscape overlay: shown when orientation lock is unavailable and device is in landscape -->
+    <div id="rotate-device-overlay" style="display: none;" aria-hidden="true">
+        <p id="rotate-device-message" class="uk-text-center uk-margin-remove">Please rotate your phone</p>
+    </div>
+
+    <div id="lw_overlay" style="display: none;" aria-hidden="true">
+        <p id="lw_overlay-text"></p>
+        <form id="lw_section-form" style="display: none;" autocomplete="off">
+            <label for="lw_section-input">Section number</label>
+            <input id="lw_section-input" class="uk-input" type="text" inputmode="text" maxlength="8" aria-describedby="lw_section-error">
+            <p id="lw_section-error" hidden>Enter a section like 142 or 142A.</p>
+            <button type="submit" id="lw_section-submit" class="uk-button uk-button-primary">Confirm section</button>
+        </form>
+        <button type="button" id="lw_enable-motion" class="uk-button uk-button-default">Enable motion</button>
+    </div>
+
+    <!-- Fixed header (shown when displayAssets runs) -->
+    <header id="page-header" style="display: none;">
+        <div id="title-container" class="uk-flex uk-flex-center uk-flex-middle"></div>
+    </header>
+
+    <!-- Main content area (camera/video + join/leave) -->
+    <main id="camera-main">
+        <div id="overlay" class="uk-flex uk-flex-center uk-flex-column uk-flex-middle">
+            <!-- Camera preview — fills the middle space when recording is active -->
+            <div id="camera-preview-wrapper" style="display:none;">
+                <video id="recording-video" autoplay muted playsinline></video>
+            </div>
+
+            <div id="button-container" class="uk-flex uk-flex-center uk-flex-column uk-flex-middle">
+                <div id="info-container" class="uk-flex uk-flex-center uk-flex-middle uk-margin-bottom">
+                    <div id="camera-feed" style="opacity: 0; width: 0px; height: 0px"></div>
+                    <p id="info-text" class="uk-padding-small uk-margin-remove uk-text-center" style="display: none;">
+                        Participating in Vixi Light requires access to your camera and flashlight. Please tap the button below to begin.
+                    </p>
+                </div>
+
+                <div id="join-consent-row" class="uk-text-center uk-margin-small-bottom" style="display: none;" role="group" aria-label="Consent">
+                    <label id="join-consent-label" class="uk-flex uk-flex-center uk-flex-middle" for="join-consent-checkbox" style="gap: 8px;">
+                        <input type="checkbox" id="join-consent-checkbox" class="uk-checkbox" />
+                        <span>I Understand</span>
+                    </label>
+                </div>
+                <button id="join-button" class="uk-flex uk-flex-center uk-flex-middle uk-button uk-button-primary" style="display: none;"><span class="mdi mdi-flash"></span>Join Light Show</button>
+                <button id="leave-button" class="uk-flex uk-flex-center uk-flex-middle uk-button uk-button-default" style="display: none;"><span class="mdi mdi-exit-to-app"></span>Leave Light Show</button>
+            </div>
+        </div>
+    </main>
+
+
+    <!-- Fixed footer to show redirect countdown -->
+    <div id="redirecting-footer" style="display: none;">
+        <div id="redirecting-div">
+            <p id="redirecting-text" class="uk-text-center uk-margin-remove">Redirecting in 5 sec</p>
+        </div>
+    </div>
+
+    <!-- Fixed footer with recording controls and legal -->
+    <footer id="page-footer">
+        <div class="footer-camera-controls" style="display:none;">
+            <p id="recording-hint"></p>
+            <p id="recording-pending-download-hint" class="uk-margin-remove" style="display:none;"></p>
+            <div id="recording-share-overlay" style="display: none;" aria-hidden="true">
+                <button type="button" id="recording-share-overlay-btn" class="uk-button uk-button-primary">Share</button>
+            </div>
+            <div id="recording-btn-row">
+                <div id="lock-zone">
+                    <span class="mdi mdi-lock-outline"></span>
+                </div>
+                <div id="recording-btn-wrapper">
+                    <svg id="recording-arc" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                        <circle class="arc-bg" cx="50" cy="50" r="44"/>
+                        <circle class="arc-progress" cx="50" cy="50" r="44"/>
+                    </svg>
+                    <button id="recording-btn" type="button">
+                        <span class="mdi mdi-stop recording-icon-stop" style="display:none;"></span>
+                        <span class="mdi mdi-download recording-icon-save" style="display:none;"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="space-container" class="uk-flex uk-flex-center uk-flex-bottom">
+            <p id="debug-text" class="uk-text-center uk-text-small uk-text-muted"></p>
+            <p id="debug-text-2" class="uk-text-center uk-text-small uk-text-muted"></p>
+            <div id="mlb-footer" class="uk-text-center uk-text-small" style="display: none;">
+                <p class="uk-margin-remove">By participating you are agreeing to
+                    <a href="https://www.mlb.com/app/ballpark/official-information/terms-of-use" target="_blank">MLB's Terms & Conditions</a> and
+                    <a href="https://www.mlb.com/app/ballpark/official-information/privacy-policy" target="_blank">Privacy Policy</a>.
+                    Contact <a id="mlb-footer-support-link" href="mailto:VixiSuiteSupport@thefamousgroup.com" target="_blank">Support</a>.</p>
+                <p class="uk-margin-remove">© 2026 MLB Advanced Media, L.P. All rights reserved</p>
+            </div>
+        </div>
+    </footer>
+    <canvas id="recording-canvas" style="display:none;"></canvas>
+     <!-- UIkit JS -->
+     <script src="/vendor/uikit/js/uikit.min.js"></script>
+     <script src="/vendor/uikit/js/uikit-icons.min.js"></script>
+
+     <!-- Socket.IO -->
+     <script src="/socket.io/socket.io.js"></script>
+     <script src="/config.js"></script>
+
+     <!-- Bundled JS -->
+     <script type="module" src="/js/user.bundle.js"></script>
+</body>
+</html>

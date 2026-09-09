@@ -1,0 +1,31 @@
+# Environment variables
+.env
+
+# Dependencies
+node_modules/
+
+# Build output
+public/css/
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db 
+
+# Local data (do not commit)
+server/paths.json
+server/orgsAndTickets.js
+server/stats-bu.js
+public/js/orgsAndTickets.js
+public/js/OrgsAndTickets.js
+
+# build artifacts
+dist/
+dist-test/
+
+# programs
+public/assets/lynx.json
+public/assets/rangers.json

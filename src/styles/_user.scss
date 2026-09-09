@@ -1,0 +1,430 @@
+:root {
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+    --vvh: 100dvh;
+}
+
+body.user-page {
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+#button-container {
+    width: 100%;
+
+    button {
+        width: 70%;
+        height: 70px;
+    }
+
+    #leave-button {
+        width: 100%;
+    }
+}
+
+#overlay {
+    padding: 20px;
+    box-sizing: border-box;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0);
+    opacity: 1;
+}
+
+#page-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 300;
+    padding: 12px;
+    padding-top: calc(12px + var(--safe-top));
+    padding-left: calc(12px + var(--safe-left));
+    padding-right: calc(12px + var(--safe-right));
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.5) 0%, rgba(255, 255, 255, 0.1) 100%);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(6px);
+}
+
+#page-header::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 0.75px;
+    background: linear-gradient(to right, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 1) 50%, rgba(255, 255, 255, 0) 100%);
+}
+
+// Landscape overlay: shown when orientation lock is unavailable and device is rotated to landscape
+#rotate-device-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.9);
+    padding: 24px;
+    box-sizing: border-box;
+
+    #rotate-device-message {
+        color: #fff;
+        font-size: 1.25rem;
+        line-height: 1.4;
+        text-align: center;
+        max-width: 280px;
+    }
+}
+
+// Hide header and its divider when body has .hide-header
+body.hide-header {
+    #page-header {
+        display: none !important;
+    }
+    #page-header::after {
+        display: none !important;
+    }
+}
+
+#camera-main {
+    min-height: 100dvh;
+    min-height: 100vh;
+    // Make space for fixed header/footer (approximate heights)
+    padding-top: 124px;
+    padding-bottom: 124px;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+
+#page-footer, #redirecting-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    padding: 12px;
+    padding-bottom: calc(12px + var(--safe-bottom));
+    padding-left: calc(12px + var(--safe-left));
+    padding-right: calc(12px + var(--safe-right));
+    background: linear-gradient(0deg, rgba(0, 0, 0, 0.8) 0%, rgba(255, 255, 255, 0.1) 100%);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(6px);
+    // Dynamic footer colors
+    color: var(--footer-text-color, #C5C5C5);
+    a {
+        color: var(--footer-link-color, #D52265) !important;
+        display: inline;
+    }
+    #redirecting-text {
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6), 0 0 4px rgba(0, 0, 0, 0.4);
+    }
+}
+
+#page-footer::before, #redirecting-footer::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 0.75px;
+    background: linear-gradient(to right, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 1) 50%, rgba(255, 255, 255, 0) 100%);
+}
+
+#info-container, #disclaimer-container {
+    width: 100%;
+    height: 100px;
+}
+
+#mlb-footer {
+    width: 98%;
+    margin: 0 auto;
+    color: inherit;
+    p { white-space: normal; }
+    a { display: inline; white-space: normal; }
+}
+
+// Info text background hook
+#info-text {
+    //background-color: var(--info-text-bg, transparent);
+    border-radius: 6px;
+}
+
+#join-button {
+    //background-color: #236192 !important;
+    background-color: $primary-color;
+    color: $white;
+    border: 1px solid $primary-color;
+    box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.5);
+}
+
+#background-container {
+    position: relative;
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
+
+    #disclaimer-container {
+        a {
+            color: #236192 !important;
+        }
+    }
+}
+#title-container {
+    margin: 0 auto;
+    width: 100%;
+    height: 10vh;
+    background-position: center;
+    background-size: contain;
+    background-repeat: no-repeat;
+}
+
+#control-container {
+    #info-text, #space-filler {
+        height: 150px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+}
+
+// Camera feed styles
+#camera-card {
+    width: 100%;
+}
+
+#status-text {
+    color: red;
+    font-size: 12px;
+    opacity: 0.5;
+}
+
+#info-text.countdown {
+    color: $primary-color;
+    font-size: 80px;
+    font-weight: bold;
+}
+
+
+
+// ─── Recording UI ────────────────────────────────────────────────────────────
+
+// Camera preview wrapper — fills middle space between title and buttons when recording is active
+#camera-preview-wrapper {
+    flex: 1;
+    min-height: 0;         // allow flex child to shrink below content size
+    position: relative;
+    aspect-ratio: 2 / 3;
+    max-width: 100%;
+    margin: 10px 0;
+    overflow: hidden;
+    background: #000;
+    border-radius: 12px;
+
+    video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+}
+
+// When recording is active (camera + torch enabled), make camera preview full viewport behind header/footer
+#overlay.recording-mode #camera-preview-wrapper {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    border-radius: 0;
+    aspect-ratio: unset;
+    flex: none;
+    min-height: unset;
+    z-index: 0;
+
+    video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+}
+
+// Flex layout override when camera preview is active — stack items instead of space-between
+#overlay.recording-mode {
+    justify-content: flex-start !important;
+}
+
+.footer-camera-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 0 0 12px 0;
+}
+
+#recording-share-overlay {
+    margin: 8px 0;
+}
+
+#recording-share-overlay #recording-share-overlay-btn {
+    min-width: 120px;
+}
+
+#recording-hint, #recording-pending-download-hint {
+    color: var(--footer-text-color, #C5C5C5);
+    text-align: center;
+    font-size: 16px;
+    margin: 0 auto;
+    padding: 0;
+    font-weight: bold;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6), 0 0 4px rgba(0, 0, 0, 0.4);
+}
+
+#recording-btn-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+#recording-btn-wrapper {
+    position: relative;
+    width: 72px;
+    height: 72px;
+    flex-shrink: 0;
+}
+
+#recording-arc {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg); // start arc at 12 o'clock
+
+    .arc-bg {
+        fill: none;
+        stroke: var(--recording-text, white);
+        stroke-width: 8;
+    }
+
+    .arc-progress {
+        fill: none;
+        stroke: var(--record-download-color, #FF3B30);
+        stroke-width: 8;
+        stroke-dasharray: 276.46;
+        stroke-dashoffset: 276.46; // starts empty; JS drives to 0 when full
+        transition: stroke-dashoffset 0.1s linear;
+    }
+}
+
+#recording-btn {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--recording-text, white);
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+    transition: background 0.15s;
+
+    .recording-icon-stop,
+    .recording-icon-save {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate3d(-50%, -50%, 0);
+        color: var(--recording-accent, #FF3B30);
+        font-size: 28px;
+        line-height: 1;
+    }
+
+    &.recording-active {
+        background: var(--recording-accent, #FF3B30);
+
+        .recording-icon-stop { color: var(--recording-text, white); }
+    }
+}
+
+// When a recording is ready to download, outer ring and download icon use record-download-color
+body.recording-pending-download {
+    #recording-arc .arc-bg {
+        stroke: var(--record-download-color, #FF3B30);
+    }
+    #recording-btn .recording-icon-save {
+        color: var(--record-download-color, #FF3B30);
+    }
+}
+
+#lock-zone {
+    display: none;
+    position: absolute;
+    // Place to the left of the centered button without shifting it
+    // btn-wrapper is 72px, so its left edge is at 50% - 36px; 16px gap
+    right: calc(50% + 52px);
+    top: 50%;
+    transform: translateY(-50%);
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    font-size: 22px;
+    color: var(--recording-text, white);
+
+    > span {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate3d(-50%, -50%, 0);
+        line-height: 1;
+    }
+    transition: background 0.15s;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+
+    &.lock-active {
+        background: rgba(255, 255, 255, 0.65);
+        color: #333;
+    }
+}
+
+// ─── End Recording UI ────────────────────────────────────────────────────────
+
+//media queries
+@media (max-width: 450px) {
+    #logo-container {
+        img {
+            width: 70px;
+            height: 70px;
+        }
+        h1 {
+            font-size: 50px;
+        }
+    }
+}
+
+@media (max-width: 350px) {
+    #logo-container {
+        img {
+            width: 60px;
+            height: 60px;
+        }
+        h1 {
+            font-size: 40px;
+        }
+    }
+}

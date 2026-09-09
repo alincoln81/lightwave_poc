@@ -1,0 +1,86 @@
+ #helper {
+
+    height: auto !important;
+
+
+    .uk-alert-success {
+        background: rgba($accent-color, 0.2);
+        color: $accent-color;
+        border-radius: 10px;
+        padding: 16px;
+        margin-top: 16px;
+        margin-bottom: 16px;
+
+        strong {
+            color: #f0506e;
+            font-size: 1.2rem;
+        }
+
+        .uk-alert-close {
+            color: $accent-color;
+        }
+
+        a {
+            color: #f0506e;
+            text-decoration: underline;
+            font-weight: 600;
+            display: inline;
+            font-size: 1.2rem;
+        }
+    }
+
+    .uk-button-default, .uk-button-default-primary {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+    }
+
+    .uk-card-title, .uk-modal-title {
+        gap: 4px;
+        display: flex;
+        align-items: center;
+
+        .mdi {
+            margin-top: 5px;
+        }
+    }
+
+    .uk-modal-title {
+        justify-content: center;
+    }
+
+    .uk-table {
+        width: 100%;
+        tr {
+            border-bottom: 1px solid $gray-500;
+            &:hover {
+                background: $accent-color;
+            }
+        }
+        th {
+            padding: 16px;
+            text-align: left;
+            vertical-align: bottom;
+            font-size: 1.3rem;
+            color: $white;
+            text-transform: uppercase;
+        }
+        td {
+            padding: 16px;
+            text-align: left;
+            vertical-align: middle;
+            font-size: 1rem;
+            color: $white;
+        }
+        th.col-right,
+        td.col-right {
+            text-align: right;
+        }
+        td.col-right input {
+            display: block;
+            margin-left: auto;
+        }
+    }
+ }
+

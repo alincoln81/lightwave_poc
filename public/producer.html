@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vixi Light Show - Producer</title>
+    <link rel="icon" type="image/png" href="../assets/images/favicon.png">
+    
+    <!-- UIkit CSS -->
+    <link rel="stylesheet" href="/vendor/uikit/css/uikit.min.css" />
+    
+    <!-- MDI Icons -->
+    <link rel="stylesheet" href="/vendor/mdi/css/materialdesignicons.min.css">
+    
+    <!-- Google Fonts - Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="../css/main.css">
+</head>
+<body>
+    <div class="uk-container">
+        <h1 class="uk-padding uk-text-center uk-padding-remove-bottom uk-padding-remove-horizontal uk-margin-small-bottom">Producer Dashboard</h1>
+        <h2 class="uk-text-center uk-text-muted uk-text-small uk-margin-remove-top" id="version">BETA v.0.198.5</h2>
+
+        <ul uk-tab role="tablist" class="uk-tab uk-flex-center">
+            
+            <li role="presentation" class="uk-active"><a href="#" id="uk-tab-0" role="tab"><span class="mdi mdi-theater"></span>Show Controls</a></li>
+            <li role="presentation" ><a href="#" id="uk-tab-1" role="tab"><span class="mdi mdi-tools"></span>Program Builder</a></li>
+            <li role="presentation" ><a href="#" id="uk-tab-2" role="tab"><span class="mdi mdi-cellphone"></span>Input</a></li>
+            <li role="presentation" ><a href="#" id="uk-tab-3" role="tab"><span class="mdi mdi-monitor"></span>Output</a></li>
+            
+        </ul>
+
+        <div class="uk-switcher uk-margin">
+
+            <!-- Show Controls -->
+            <div id="show-controls" role="tabpanel" aria-labelledby="uk-tab-0">
+                <!-- Add an overlay with the message 'Show is locked, please unlock to allow users to join' and a button to unlock the show -->
+                <div style="display: none;" id="show-controls-overlay" class="uk-overlay uk-overlay-default uk-overlay-primary uk-text-center">
+                    <div> 
+                        <h3 class="uk-text-center">The LightShow is locked, please unlock to allow users to join</h3>
+                        <button class="uk-button uk-button-primary uk-margin-auto" id="unlock-show-btn">Unlock Show</button>
+                    </div>
+                </div>
+                <div id="dj-card" class="uk-card uk-card-default-primary uk-card-body uk-margin">
+                    <h3 class="uk-card-title uk-margin-remove-top">Show Controls</h3>
+                    <hr>
+
+                    <div uk-grid>
+
+                        <div class="uk-width-1-3@l">
+                            <h4>Effects</h4>
+                            <div id="dj-container" class="uk-grid-small uk-child-width-auto uk-margin-small-left" uk-grid></div>
+                        </div>
+
+                        <div class="uk-width-2-3@l">
+                            <h4>Custom Effects</h4>
+                            <div id="custom-programs" class="uk-margin-small-left uk-grid-small uk-child-width-auto" uk-grid>
+                                <div class="uk-text-muted"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="uk-width-1-1">
+                            <hr class="uk-margin-top uk-margin-bottom">
+                        </div>
+
+                        <div class="uk-width-1-1 uk-flex uk-flex-right" uk-flex>
+                            
+                            <button class="uk-button with-lightbulb uk-margin-small-left uk-button-danger" id="dj-stop-btn">
+                                <p><span class="mdi mdi-stop"></span></p>
+                                <p id="dj-stop-btn-text" class="uk-text-muted">Stop Effects<br>&amp; Redirect Users</p>
+                            </button>
+                        </div>
+                    </div>
+                    
+                </div>
+
+                <div id="lw_card" class="uk-card uk-card-default uk-card-body uk-margin">
+                    <h3 class="uk-card-title uk-margin-remove-top">Lightwave</h3>
+                    <p class="uk-text-muted uk-text-small">When on, phones follow a section wave instead of audio effects. Users enter a section number (or open a link with <code>?lw_section=142</code>).</p>
+                    <div class="lw_mode-row">
+                        <label for="lw_mode-toggle">
+                            <input id="lw_mode-toggle" class="uk-checkbox" type="checkbox">
+                            Enable Lightwave mode
+                        </label>
+                    </div>
+                    <div class="lw_timing-row">
+                        <label for="lw_countdown-seconds">Countdown (sec)</label>
+                        <input id="lw_countdown-seconds" class="uk-input" type="number" min="1" max="10" step="1" value="3">
+                        <label for="lw_section-delay">Section delay (ms)</label>
+                        <input id="lw_section-delay" class="uk-input" type="number" min="50" max="5000" step="50" value="400">
+                        <label for="lw_torch-max">Torch max (ms)</label>
+                        <input id="lw_torch-max" class="uk-input" type="number" min="200" max="10000" step="100" value="2000">
+                    </div>
+                    <div class="lw_timing-row">
+                        <label class="uk-width-1-1" for="lw_waiting-text">Waiting text</label>
+                        <input id="lw_waiting-text" class="uk-input" type="text" value="You're in section {section}. Get ready.">
+                    </div>
+                    <div class="lw_actions">
+                        <button type="button" id="lw_wave-start" class="uk-button uk-button-primary">Start Wave</button>
+                        <button type="button" id="lw_wave-stop" class="uk-button uk-button-default">Stop Wave</button>
+                    </div>
+                    <h4 class="uk-margin-small-bottom">Occupied sections</h4>
+                    <ul id="lw_occupancy"></ul>
+                </div>
+            </div>
+
+            <!-- Program Builder -->
+            <div id="program-builder" role="tabpanel" aria-labelledby="uk-tab-1">
+                <div class="uk-card uk-card-default-primary uk-card-body uk-margin">
+                    <h3 class="uk-margin-remove-bottom"> Program Builder</h3>
+                    <div class="uk-margin-small-top uk-flex uk-flex-bottom" uk-grid>
+                        <div class="uk-width-expand">
+                            <input type="text" id="clip-input-text" class="uk-input uk-margin-small-top" placeholder="Program Name">
+                        </div>
+                        <div class="uk-width-auto">
+                            <div uk-form-custom>
+                                <input id="clip-input" type="file" accept="audio/*,video/*" aria-label="Custom controls" class="uk-margin-small-top" uk-tooltip="title: Upload a clip to generate a program. The clip must be a video or audio file. Maximum size is 500MB.">
+                                <button id="clip-input-btn" class="uk-button uk-button-default" type="button" tabindex="-1">
+                                    <span class="mdi mdi-upload"></span>
+                                    Upload Clip
+                                </button>
+                            </div>
+                        </div>
+                        <div class="uk-width-auto">
+                            <button class="uk-button uk-button-primary" id="generate-btn"><span class="mdi mdi-content-save"></span>Generate</button>
+                        </div>
+                        <div class="uk-width-1-1">
+                            <hr>
+                            <div id="ffmpeg-progress-wrap" class="uk-progress uk-margin-small-top" style="display:none;">
+                                <progress id="ffmpeg-progress" class="uk-progress" value="0" max="100"></progress>
+                            </div>
+                        </div>
+                        <div class="uk-width-1-1 uk-margin-remove-top">
+                            <table id="custom-program-manager" class="uk-table uk-table-striped uk-table-middle uk-table-small uk-table-responsive">
+                                <tbody id="custom-program-manager-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input -->
+            <div id="input" role="tabpanel" aria-labelledby="uk-tab-2">
+                <div class="uk-card uk-card-default-primary uk-card-body uk-margin">
+                    <div uk-grid class="uk-margin-small-bottom">
+                        <div class="uk-width-expand">
+                            <h3 class="uk-margin-small-bottom">Input Builder</h3>
+                        </div>
+                        <div class="uk-width-auto">
+                            <div class="uk-flex uk-grid-small uk-flex-middle" uk-flex uk-grid>
+                                <div class="uk-width-auto">
+                                    Participant Link:
+                                </div>
+                                <div class="uk-width-auto">
+                                    <a id="user-link" href="" target="_blank"><button class="uk-button uk-button-default"><span class="mdi mdi-open-in-new uk-margin-remove"></span></button></a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="uk-width-1-1 uk-margin-small-top">
+                            <hr>
+                        </div>
+                        <!-- Preview States moved to right panel -->
+                        <div class="uk-width-auto@l uk-width-1-1 uk-margin-small-top uk-padding-remove-left uk-margin-small-left">
+                            <div id="input-container-preview" class="uk-margin-auto">
+                                <div class="preview-frame">
+                                  <div id="preview-body" class="preview-body">
+                                    <header id="preview-page-header">
+                                      <div id="input-title-preview"></div>
+                                    </header>
+                                    <main id="preview-camera-main">
+                                      <div id="preview-overlay" class="uk-flex uk-flex-center uk-flex-column uk-flex-middle uk-flex-between">
+                                        <div id="info-text-container" class="uk-margin-bottom uk-padding-small">
+                                          <div id="info-text-preview" class="uk-flex uk-flex-center uk-flex-middle uk-flex-row uk-text-center">
+                                            <span id="info-text-onboarding-content"></span>
+                                          </div>
+                                          <div id="info-text-show-locked-preview" class="uk-flex uk-flex-center uk-flex-middle uk-flex-row uk-text-center" style="display: none;"></div>
+                                          <div id="info-text-joined-preview" class="uk-flex uk-flex-center uk-flex-middle uk-flex-row uk-text-center" style="display: none;"></div>
+                                          <div id="info-text-join-failed-preview" class="uk-flex uk-flex-center uk-flex-middle uk-flex-row uk-text-center" style="display: none;"></div>
+                                        </div>
+                                        <div id="preview-join-consent-row" class="uk-text-center uk-margin-small-bottom" style="display: none;" role="group" aria-label="Consent">
+                                            <label id="preview-join-consent-label" class="uk-flex uk-flex-center uk-flex-middle" for="preview-join-consent-checkbox" style="gap: 8px;">
+                                                <input type="checkbox" id="preview-join-consent-checkbox" class="uk-checkbox" />
+                                                <span>I Understand</span>
+                                            </label>
+                                        </div>
+                                        <div class="uk-text-center">
+                                          <button class="uk-button uk-button-primary uk-button-disabled" id="join-btn-preview">
+                                              <span class="mdi mdi-flash"></span>Join Light Show
+                                          </button>
+                                          <button class="uk-button uk-button-primary uk-button-disabled" id="leave-btn-preview" style="display: none;">
+                                              <span class="mdi mdi-exit-to-app"></span>Leave Light Show 
+                                          </button>
+                                        </div>
+                                        <!-- End Card preview area (shown when preview state = endcard) -->
+                                        <div id="end-card-preview" class="uk-text-center uk-padding" style="display:none;">
+                                            <div class="uk-text-meta">End Card Preview</div>
+                                        </div>
+                                      </div>
+                                    </main>
+                                    <footer id="preview-page-footer">
+                                      <div id="preview-recording-controls" class="preview-footer-camera-controls" style="display:none;">
+                                        <p id="preview-recording-hint" class="preview-recording-hint uk-text-bold uk-text-center uk-margin-remove-bottom"></p>
+                                        <div id="preview-recording-btn-row" class="uk-flex uk-flex-center uk-margin-small-bottom">
+                                          <div id="preview-recording-btn-wrapper" class="preview-recording-btn-wrapper">
+                                            <button id="preview-recording-btn" type="button" class="preview-recording-btn" disabled aria-label="Record">
+                                        
+                                            </button>
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <div id="mlb-footer-preview" class="uk-text-center uk-text-small uk-margin-remove" style="display:none;">
+                                        <p class="uk-margin-remove">By participating you are agreeing to 
+                                          <a href="https://www.mlb.com/app/ballpark/official-information/terms-of-use" target="_blank">MLB's Terms &amp; Conditions</a> and 
+                                          <a href="https://www.mlb.com/app/ballpark/official-information/privacy-policy" target="_blank">Privacy Policy</a>.
+                                          Contact <a id="mlb-footer-support-link-preview" href="mailto:VixiSuiteSupport@thefamousgroup.com" target="_blank">Support</a>.
+                                        </p>
+                                        <p class="uk-margin-remove">© 2026 MLB Advanced Media, L.P. All rights reserved</p>
+                                      </div>
+                                    </footer>
+                                  </div>
+                                </div>
+                              </div>
+                        </div>
+                        <div class="uk-width-expand@l uk-width-1-1 uk-margin-small-top">
+                            <div id="input-settings" class="uk-grid-small uk-flex-between uk-flex-middle settings-panel" uk-grid uk-flex>
+
+                                <!-- Preview States (in right panel as segmented pills) -->
+                                <div class="uk-width-1-1">
+                                    <div class="settings-card">
+                                        <h4 class="settings-heading">Preview States</h4>
+                                        <div id="preview-states" class="segmented">
+                                            <button class="segmented-item uk-active" data-state="onboarding" id="preview-state-onboarding" aria-pressed="true">Onboarding</button>
+                                            <button class="segmented-item" data-state="joined" id="preview-state-joined" aria-pressed="false">Joined</button>
+                                            <button class="segmented-item" data-state="error" id="preview-state-error" aria-pressed="false">Error</button>
+                                            <button class="segmented-item" data-state="endcard" id="preview-state-endcard" aria-pressed="false">End Card</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Removed top-level upload buttons; uploads now live in Assets card -->
+                                <!-- Assets list with eye toggles and thumbnails -->
+                                <div class="uk-width-1-1 uk-margin-remove-top">
+                                    <div class="settings-card">
+                                        <h4 class="settings-heading">Assets</h4>
+                                        <div class="assets-list">
+                                            <div class="asset-row">
+                                                <input class="visually-hidden" type="checkbox" id="asset-title-visible" checked>
+                                                <label class="asset-eye" for="asset-title-visible" aria-pressed="true"><span class="mdi mdi-eye"></span></label>
+                                                <span class="asset-label">Title Image</span>
+                                                <div id="asset-thumb-title" class="asset-thumb upload-zone" role="button" tabindex="0" aria-label="Upload Title Image"></div>
+                                                <input id="asset-file-title" class="visually-hidden" type="file" accept=".jpg,.jpeg,.png,.webp,.mp4" data-collection="input" data-field="titleImage" />
+                                            </div>
+                                            <div class="asset-row">
+                                                <input class="visually-hidden" type="checkbox" id="asset-bg-visible" checked>
+                                                <label class="asset-eye" for="asset-bg-visible" aria-pressed="true"><span class="mdi mdi-eye"></span></label>
+                                                <span class="asset-label">Background Image</span>
+                                                <div id="asset-thumb-bg" class="asset-thumb upload-zone" role="button" tabindex="0" aria-label="Upload Background Image"></div>
+                                                <input id="asset-file-bg" class="visually-hidden" type="file" accept=".jpg,.jpeg,.png,.webp,.mp4" data-collection="input" data-field="backgroundImage" />
+                                            </div>
+                                            <div class="asset-row" id="asset-endcard-visible-row">
+                                                <input class="visually-hidden" type="checkbox" id="asset-endcard-visible" checked>
+                                                <label class="asset-eye" for="asset-endcard-visible" aria-pressed="true"><span class="mdi mdi-eye"></span></label>
+                                                <span class="asset-label">End Card Image</span>
+                                                <div id="asset-thumb-endcard" class="asset-thumb upload-zone" role="button" tabindex="0" aria-label="Upload End Card Image"></div>
+                                                <input id="asset-file-endcard" class="visually-hidden" type="file" accept=".jpg,.jpeg,.png,.webp,.mp4" data-collection="input" data-field="endCardImage" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Redirect Settings -->
+                                <div id="redirect-settings" class="uk-width-1-1 uk-margin-remove-top">
+                                    <div class="settings-card">
+                                        <h4 class="settings-heading">Redirect</h4>
+                                        <div id="redirect-url-container">
+                                            <div class="settings-row" id="auto-redirect-row">
+                                                <label class="row-label" for="auto-redirect-enabled">Auto-redirect</label>
+                                                <div class="row-value">
+                                                    <label class="switch uk-margin-remove" id="auto-redirect-switch" aria-pressed="false" aria-label="Auto-redirect after end card">
+                                                        <input class="uk-checkbox" type="checkbox" id="auto-redirect-enabled">
+                                                        <span class="track"><span class="thumb"></span></span>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div class="settings-row">
+                                                <label class="row-label" for="redirect-url">Redirect URL</label>
+                                                <div class="row-control">
+                                                    <input type="text" id="redirect-url" class="uk-input" placeholder="https://example.com">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Recording (shown only when gateRecordingEnabled for this deployment) -->
+                                <div class="uk-width-1-1 uk-margin-remove-top" id="recording-section" style="display:none;">
+                                    <div class="settings-card">
+                                        <div class="settings-row">
+                                            <label class="row-label"><strong>Recording</strong></label>
+                                            <div class="row-value">
+                                                <label class="switch uk-margin-remove">
+                                                    <input class="uk-checkbox" type="checkbox" id="recording-enabled">
+                                                    <span class="track"><span class="thumb"></span></span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div id="recording-options" style="display:none;">
+                                            <div id="recording-duration-row" class="uk-margin-small-bottom">
+                                                <div class="settings-row slider-row">
+                                                    <label for="max-recording-duration" class="row-label">Max Recording Duration</label>
+                                                    <div class="row-value"><strong><span id="recording-duration-display">30</span>s</strong></div>
+                                                </div>
+                                                <input type="range" id="max-recording-duration" class="uk-range" min="10" max="600" step="5" value="30">
+                                            </div>
+                                            <div id="record-button-color-row" class="settings-row uk-margin-small-bottom">
+                                                <label class="row-label" for="record-button-color">Record Button Color</label>
+                                                <input id="record-button-color" type="color" class="uk-input color-chip" value="#D52265">
+                                            </div>
+                                            <div id="record-download-color-row" class="settings-row uk-margin-small-bottom">
+                                                <label class="row-label" for="record-download-color">Record Download Color</label>
+                                                <div class="row-control row-control-end">
+                                                    <input id="record-download-color" type="color" class="uk-input color-chip" value="#FF3B30" title="Outer ring and download icon when a recording is ready">
+                                                </div>
+                                            </div>
+                                            <div id="recording-instructions-row-photo" class="uk-margin-small-bottom">
+                                                <label id="photo-instructions-label" for="photo-instructions">Photo Instructions</label>
+                                                <input id="photo-instructions" type="text" class="uk-input" value="Tap for photo">
+                                            </div>
+                                            <div id="recording-instructions-row-video" class="uk-margin-small-bottom">
+                                                <label id="video-instructions-label" for="video-instructions">Video Instructions</label>
+                                                <input id="video-instructions" type="text" class="uk-input" value="Hold for video">
+                                            </div>
+                                            <div id="recording-instructions-row-download" class="uk-margin-small-bottom">
+                                                <label id="download-instructions-label" for="download-instructions">Download Instructions</label>
+                                                <input id="download-instructions" type="text" class="uk-input" value="Tap the icon to download your recording">
+                                            </div>
+                                            <div id="end-card-download-prompt-row" class="recording-instructions-row uk-margin-small-bottom" style="display: none;">
+                                                <label class="row-label" for="end-card-download-prompt">End card download prompt</label>
+                                                <textarea id="end-card-download-prompt" class="uk-textarea" rows="3" placeholder="Thanks for participating, to download your video press the button below."></textarea>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Info Text -->
+                                <div class="uk-width-1-1 uk-margin-remove-top">
+                                    <div class="settings-card" id="onboarding-styling-card">
+                                        <h4 class="settings-heading">Onboarding Styling</h4>
+                                        <div class="settings-row" id="info-text-color-container">
+                                            <label class="row-label" for="info-text-color-color">Text Color</label>
+                                            <div class="row-control">
+                                                <input id="info-text-color-color" type="color" class="uk-input color-chip">
+                                            </div>
+                                        </div>
+                                        <div class="settings-row" id="info-text-bg-color-container">
+                                            <label class="row-label" for="info-text-bg-color-color">Text Background Color</label>
+                                            <div class="row-control row-control-inline">
+                                                <input id="info-text-bg-color-color" type="color" class="uk-input color-chip">
+                                                <div class="input-with-prefix input-with-suffix" style="max-width: 140px;">
+                                                    <span class="prefix mdi mdi-opacity" aria-hidden="true"></span>
+                                                    <input id="info-text-bg-alpha-input" type="number" class="uk-input" min="1" max="100" step="1" value="10">
+                                                    <span class="suffix">%</span>
+                                                </div>
+                                                <input class="uk-input" id="info-text-bg-color" type="text" value="transparent" style="display:none;">
+                                            </div>
+                                        </div>
+                                        <div class="settings-row input-row" id="info-text-onboarding-container">
+                                            <label class="row-label" for="info-text-onboarding">Onboarding</label>
+                                            <div class="row-control">
+                                                <textarea class="uk-textarea" id="info-text-onboarding" rows="3"
+                                                    value="Participating in Vixi Light Show requires access to your camera and flashlight. Please tap the button below to begin." 
+                                                    placeholder="Participating in Vixi Light Show requires access to your camera and flashlight. Please tap the button below to begin."
+                                                ></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="settings-row input-row" id="info-text-joined-container">
+                                            <label class="row-label" for="info-text-joined">Joined</label>
+                                            <div class="row-control">
+                                                <textarea class="uk-textarea" id="info-text-joined" rows="3"
+                                                    value="You are now participating in the LightShow, enjoy!" 
+                                                    placeholder="You are now participating in the LightShow, enjoy!"
+                                                ></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="settings-row input-row" id="info-text-join-failed-container">
+                                            <label class="row-label" for="info-text-join-failed">Joined Failed</label>
+                                            <div class="row-control">
+                                                <textarea class="uk-textarea" id="info-text-join-failed" rows="3"
+                                                    value="Unable to connect to your camera or flashlight. Please try again." 
+                                                    placeholder="Unable to connect to your camera or flashlight. Please try again."
+                                                ></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="settings-row input-row" id="show-locked-message-endcard-container" style="display: none;">
+                                            <label class="row-label" for="show-locked-message-endcard">Show locked message</label>
+                                            <div class="row-control">
+                                                <textarea class="uk-textarea" id="show-locked-message-endcard" rows="3"
+                                                    placeholder="The LightShow is not currently active"
+                                                ></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="settings-row input-row" id="show-locked-message-container" style="display: none;">
+                                            <label class="row-label" for="show-locked-message">Show locked message</label>
+                                            <div class="row-control">
+                                                <textarea class="uk-textarea" id="show-locked-message" rows="3" 
+                                                    value="The LightShow is not currently active"
+                                                    placeholder="The LightShow is not currently active"
+                                                ></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="settings-row input-row" id="rotate-device-message-container">
+                                            <label class="row-label" for="rotate-device-message">Rotate device message</label>
+                                            <div class="row-control">
+                                                <textarea class="uk-textarea" id="rotate-device-message" rows="3" 
+                                                    value="Please rotate your phone"
+                                                    placeholder="Please rotate your phone"
+                                                ></textarea>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Join -->
+                                <div class="uk-width-1-1 uk-margin-remove-top">
+                                    <div class="settings-card">
+                                        <h4 class="settings-heading">Button Styling</h4>
+                                        <div class="settings-row" id="join-text-color-container">
+                                            <label class="row-label" for="join-text-color-color"><span class="mdi mdi-palette"></span> Text Color</label>
+                                            <div class="row-control">
+                                                <input id="join-text-color-color" type="color" class="uk-input color-chip">
+                                            </div>
+                                        </div>
+                                        <div class="settings-row" id="join-button-color-container">
+                                            <label class="row-label" for="join-button-color-color"><span class="mdi mdi-palette"></span> Background Color</label>
+                                            <div class="row-control">
+                                                <input id="join-button-color-color" type="color" class="uk-input color-chip">
+                                            </div>
+                                        </div>
+                                        <div class="settings-row" id="join-button-text-container">
+                                            <label class="row-label" for="join-button-text"><span class="mdi mdi-flash"></span> Text</label>
+                                            <div class="row-control">
+                                                <input class="uk-input" id="join-button-text" type="text" value="Join Light Show" placeholder="Join Light Show">
+                                            </div>
+                                        </div>
+                                        <div class="settings-row" id="join-requires-consent-row">
+                                            <label class="row-label" for="join-requires-consent-enabled">Require consent</label>
+                                            <div class="row-value">
+                                                <label class="switch uk-margin-remove" id="join-requires-consent-switch" aria-pressed="false" aria-label="Require consent before join">
+                                                    <input class="uk-checkbox" type="checkbox" id="join-requires-consent-enabled">
+                                                    <span class="track"><span class="thumb"></span></span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+
+                                <!-- Leave ===================================================================================== -->
+                                <div class="uk-width-1-3@l" style="display:none;">
+                                    <div uk-grid id="redirect-url-container" class="uk-grid-collapse uk-flex uk-flex-bottom">
+                                        <div class="uk-width-expand uk-margin-small-bottom">
+                                            <label for="redirect-url"><span class="mdi mdi-exit-to-app"></span>Leave Text</label>
+                                            <input class="uk-input" id="leave-button-text" type="text" value="Leave Light Show" placeholder="Leave Light Show">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="uk-width-1-3@l" style="display:none;">
+                                    <div uk-grid id="leave-text-color-container" class="uk-grid-collapse uk-flex uk-flex-bottom">
+                                        <div class="uk-width-expand uk-margin-small-bottom">
+                                            <label for="leave-text-color"><span class="mdi mdi-palette"></span>Leave Text Color</label>
+                                            <input class="uk-input" id="leave-text-color" type="text" value="#FFFFFF" placeholder="Leave Text Color">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="uk-width-1-3@l" style="display:none;">
+                                    <div uk-grid id="leave-button-color-container" class="uk-grid-collapse uk-flex uk-flex-bottom">
+                                        <div class="uk-width-expand uk-margin-small-bottom">
+                                            <label for="leave-button-color"><span class="mdi mdi-palette"></span>Leave Button Color</label>
+                                            <input class="uk-input" id="leave-button-color" type="text" value="#D52265" placeholder="Leave Button Color">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Footer Styling -->
+                                <div class="uk-width-1-1 uk-margin-remove-top">
+                                    <div class="settings-card" id="footer-styling-header">
+                                        <h4 class="settings-heading">Footer Styling</h4>
+                                        <div class="settings-row" id="footer-text-color-container">
+                                            <label class="row-label" for="footer-text-color-color"><span class="mdi mdi-palette"></span> Text Color</label>
+                                            <div class="row-control">
+                                                <input id="footer-text-color-color" type="color" class="uk-input color-chip">
+                                            </div>
+                                        </div>
+                                        <div class="settings-row" id="footer-link-color-row" style="display:none;">
+                                            <label class="row-label" for="footer-link-color-color"><span class="mdi mdi-link-variant"></span> Link Color</label>
+                                            <div class="row-control">
+                                                <input id="footer-link-color-color" type="color" class="uk-input color-chip">
+                                            </div>
+                                        </div>
+                                        <div class="settings-row" id="mlb-support-email-row" style="display:none;">
+                                            <label class="row-label" for="mlb-support-email">Support email</label>
+                                            <div class="row-control">
+                                                <input class="uk-input" type="email" id="mlb-support-email" placeholder="support@example.com" autocomplete="email">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Removed obsolete Hide Title toggle -->
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Output -->
+            <div id="output" role="tabpanel" aria-labelledby="uk-tab-3">
+                <div class="uk-card uk-card-default-primary uk-card-body uk-margin">
+
+                    <div uk-grid class="uk-margin-small-bottom">
+                        <div class="uk-width-expand">
+                            <h3 class="uk-margin-small-bottom">Output</h3>
+                        </div>
+
+
+                        <div class="uk-width-auto">
+                            <div class="uk-flex uk-grid-small uk-flex-middle" uk-flex uk-grid>
+                                <div class="uk-width-auto">
+                                    Output Link:
+                                </div>
+                                <div class="uk-width-auto">
+                                    <a id="output-link" href="" target="_blank"><button class="uk-button uk-button-default"><span class="mdi mdi-open-in-new uk-margin-remove"></span></button></a>
+                                </div>
+                                <!--
+                                <div class="uk-width-auto">
+                                    <button id="output-link-copy" type="button" class="uk-button uk-button-default" uk-tooltip="title: Copy output link">
+                                        <span class="mdi mdi-content-copy uk-margin-remove"></span>
+                                    </button>
+                                </div>
+                                -->
+                            </div>
+                        </div>
+
+                        <div class="uk-width-1-1 uk-margin-small-top">
+                            <hr>
+                        </div>
+
+                        <div class="uk-width-auto uk-margin-small-top uk-padding-remove-left uk-margin-small-left">
+                            <div id="output-container-preview">
+                                <div id="output-title-preview" class="uk-text-center"></div>
+                                <div id="output-qr-preview" class="uk-text-center"></div>
+                            </div>
+                        </div>
+                        <div class="uk-width-expand uk-margin-small-top">
+                            <div id="output-settings" class="uk-child-width-1-1 uk-grid-small uk-flex-between uk-flex-middle" uk-grid uk-flex>
+                                <div uk-form-custom>
+                                    <input id="qr-file" type="file" accept=".jpg,.jpeg,.png" aria-label="Custom controls" data-collection="qr" data-field="url" id="qr-image">
+                                    <button id="qr-url" class="uk-button uk-button-default" type="button" tabindex="-1">
+                                        <span class="mdi mdi-upload"></span>
+                                        QR
+                                    </button>
+                                </div>
+                                <div uk-form-custom>
+                                    <input id="output-title-file" type="file" accept=".jpg,.jpeg,.png,.mp4" aria-label="Custom controls" data-collection="output" data-field="titleImage" id="output-title">
+                                    <button id="output-titleImage" class="uk-button uk-button-default" type="button" tabindex="-1">
+                                        <span class="mdi mdi-upload"></span>
+                                        Title Image
+                                    </button>
+                                </div>
+                                <div uk-form-custom>
+                                    <input id="output-background-file" type="file" accept=".jpg,.jpeg,.png,.mp4" aria-label="Custom controls" data-collection="output" data-field="backgroundImage" id="output-background">
+                                    <button id="output-backgroundImage" class="uk-button uk-button-default" type="button" tabindex="-1">
+                                        <span class="mdi mdi-upload"></span>
+                                        Background Image
+                                    </button>
+                                </div>
+                                <div uk-form-custom></div>
+                                <div uk-form-custom></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- UIkit JS -->
+    <script src="/vendor/uikit/js/uikit.min.js"></script>
+    <script src="/vendor/uikit/js/uikit-icons.min.js"></script>
+    
+    <!-- Socket.IO -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/config.js"></script>
+    
+    <!-- Bundled JS -->
+    <script type="module" src="/js/producer.bundle.js"></script>
+</body>
+</html> 

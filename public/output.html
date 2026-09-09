@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vixi Light Show - Output</title>
+    <link rel="icon" type="image/png" href="../assets/images/favicon.png">
+    
+    <!-- UIkit CSS -->
+    <link rel="stylesheet" href="/vendor/uikit/css/uikit.min.css" />
+    
+    <!-- MDI Icons -->
+    <link rel="stylesheet" href="/vendor/mdi/css/materialdesignicons.min.css">
+    
+    <!-- Google Fonts - Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="../css/main.css">
+</head>
+<body class="uk-flex uk-flex-center uk-flex-middle uk-margin-auto">
+    
+    
+    <div id="output-container">
+        <!-- QR Code Card -->
+        <div id="output-overlay-left"></div>
+
+        <!-- Title and QR Code -->
+        <div>
+            <div id="output-title" class="uk-text-center"></div>
+            <div id="output-qr" class="uk-text-center"></div>
+        </div>
+
+        <div id="output-overlay-right"></div>
+    
+    </div>
+    
+
+    <!-- UIkit JS -->
+    <script src="/vendor/uikit/js/uikit.min.js"></script>
+    <script src="/vendor/uikit/js/uikit-icons.min.js"></script>
+    
+    <!-- Socket.IO -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/config.js"></script>
+    
+    <!-- Bundled JS -->
+    <script type="module" src="/js/output.bundle.js"></script>
+</body>
+</html> 

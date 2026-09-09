@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vixi Light Show - Helper</title>
+    <link rel="icon" type="image/png" href="../assets/images/favicon.png">
+    
+    <!-- UIkit CSS -->
+    <link rel="stylesheet" href="/vendor/uikit/css/uikit.min.css" />
+    
+    <!-- MDI Icons -->
+    <link rel="stylesheet" href="/vendor/mdi/css/materialdesignicons.min.css">
+    
+    <!-- Google Fonts - Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="../css/main.css">
+</head>
+<body id="helper">
+    <div class="uk-container uk-margin-large-top">
+        <h1 class="uk-text-center">Admin Dashboard (BETA v.0.198.5)</h1>
+
+        <!-- New Team Setup ============================================================================== -->
+        <div class="uk-card uk-card-default-primary uk-card-body uk-margin-top">
+            <h3 class="uk-card-title"><span class="mdi mdi-account"></span>New Team Setup</h3>
+            <div class="uk-grid-small" uk-grid>
+                <div class="uk-width-auto">
+                    <input class="uk-input" type="text" id="organization-name" placeholder="Organization Name">
+                </div>
+                <div class="uk-width-auto">
+                    <input class="uk-input" type="text" id="firebase-doc-name" placeholder="Firebase Doc Name">
+                </div>
+                <div class="uk-width-auto">
+                    <input class="uk-input" type="text" id="token" placeholder="Token">
+                </div>
+                <div class="uk-width-auto">
+                    <button class="uk-button uk-button-default" id="create-btn"><span class="mdi mdi-content-copy"></span>Create</button>
+                </div>
+                <div class="uk-width-1-1 uk-margin-small-top">
+                    <p id="create-status"></p>
+                </div>
+            </div>
+        </div>
+        
+
+        <!-- Deployments ============================================================================== -->
+        <div class="uk-card uk-card-default-primary uk-card-body uk-margin-top">
+            <h3 class="uk-card-title"><span class="mdi mdi-chart-line"></span>Orgs</h3>
+            <table class="uk-table uk-table-hover uk-table-striped uk-table-middle uk-table-small uk-table-responsive">
+                <thead id="deployments-thead">
+                    <tr>
+                        <th style="padding-right: 20px;">#</th>
+                        <th>Name</th>
+                        <th>Participant</th>
+                        <th>Producer</th>
+                        <th>Output</th>
+                        <th class="col-right">MLB Gate</th>
+                        <th class="col-right">Rec Gate</th>
+                        <th class="col-right">Req Mic</th>
+                        <th class="col-right">Rec Slide</th>
+                    </tr>
+                </thead>
+                <tbody id="deployments"></tbody>
+            </table>
+            <div id="deployments-stats"></div>
+        </div>
+
+    </div>
+
+    <!-- UIkit JS -->
+    <script src="/vendor/uikit/js/uikit.min.js"></script>
+    <script src="/vendor/uikit/js/uikit-icons.min.js"></script>
+    
+    <!-- Socket.IO -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/config.js"></script>
+    
+    <!-- Bundled JS -->
+    <script type="module" src="/js/helper.bundle.js"></script>
+</body>
+</html> 

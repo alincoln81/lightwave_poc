@@ -1,0 +1,244 @@
+// UIkit Overrides
+// Customizing UIkit components to match our dark theme
+// Card overrides
+.uk-card {
+    min-width: 410px !important;
+}
+
+.uk-spinner {
+    height: 20px;
+    width: 20px;
+    margin-right: 8px;
+}
+
+.uk-card-default {
+    background: transparent;
+    border: none;
+    color: $text-color;
+    border-radius: 8px;
+    box-shadow: none;
+
+    &-primary {
+        background: $gray-800;
+        border: 1px solid $gray-700;
+        box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.5);
+        border-radius: 8px;
+    }
+
+    .uk-card-title {
+        color: $text-color;
+    }
+
+    .uk-text-muted {
+        color: rgba($text-color, 0.6) !important;
+    }
+}
+
+.uk-modal {
+    color: $text-color;
+    .uk-modal-title {
+        color: $text-color;
+    }
+    .uk-modal-body {
+        color: $text-color;
+        background: $gray-900;
+    }
+}
+
+.uk-link, a {
+    color: $primary-color;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    &:hover {
+        color: color.adjust($primary-color, $lightness: -10%);
+        text-decoration: none;
+    }
+}
+
+.uk-text-muted {
+    color: $gray-100 !important;
+}
+
+// Button overrides
+.uk-button {
+    border-radius: 6px;
+    padding: 0px 16px;
+
+    &-default {
+        background: $gray-600;
+        color: $text-color;
+        border: 1px solid $gray-500;
+        &:hover {
+            background-color: color.adjust($gray-800, $lightness: +10%);
+            color: $text-color;
+            border: 1px solid $gray-500;
+        }
+    }
+
+    &-primary {
+        background: $primary-color;
+        color: $text-color;
+        border: 1px solid $gray-600;
+
+        &:hover {
+            background: color.adjust($primary-color, $lightness: -10%);
+            color: $text-color;
+        }
+    }
+
+    &-danger {
+        background: #dc3545;
+        color: $text-color;
+
+        &:hover {
+            background: color.scale(#dc3545, $lightness: -10%);
+            color: $text-color;
+        }
+    }
+}
+
+// Grid overrides
+.uk-grid {
+    margin-left: -20px;
+    
+    > * {
+        padding-left: 20px;
+    }
+}
+
+// Container overrides
+.uk-container {
+    max-width: 1200px;
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
+// Typography overrides
+.uk-text-success {
+    color: #28a745 !important;
+}
+
+.uk-text-danger {
+    color: #dc3545 !important;
+}
+
+// Icon spacing
+.mdi {
+    margin-right: 5px;
+    vertical-align: middle;
+} 
+
+.uk-form, .uk-form-stacked, .uk-form-controls {
+    .uk-button-small {
+        height: 40px;
+        width: 40px;
+        padding: 0;
+        margin: 0 auto;
+        color: $text-color;
+        background: $gray-600;
+        border: 1px solid $gray-500;
+        transition: all 0.2s ease-in-out;
+
+        &:hover {
+            background: color.adjust($gray-600, $lightness: -10%);
+        }
+
+        .mdi {
+            font-size: 24px;
+            margin: 0;
+        }
+    }
+}
+
+.uk-select, .uk-input, .uk-textarea {
+    background: $black-25;
+    color: $text-color;
+    border: 1px solid rgba($gray-100, 0.25);
+    border-radius: 6px;
+
+    &:focus {
+        background: $black-10;
+        border-color: rgba($gray-100, 0.5);
+    }
+    &:disabled {
+        background: $black-10;
+        border: 1px solid rgba($gray-100, 0.25);
+        color: rgba($text-color, 0.5);
+    }
+}
+.uk-select:not([multiple]):not([size]) option {
+    background: $gray-800 !important; 
+    background-color: $gray-800 !important;
+    color: $text-color !important;
+    &:hover {
+        background: $primary-color !important; 
+        background-color: $primary-color !important;
+    }
+}
+
+.uk-form-custom {
+    select {
+        background-color: $gray-900;
+        color: $gray-100;
+        border-color: $gray-800;
+        
+        &:hover,
+        &:focus {
+            background-color: $gray-800;
+            border-color: $gray-700;
+        }
+    }
+    
+    &::after {
+        border-color: $gray-100;
+    }
+} 
+
+.uk-form-label {
+        color: $text-color;
+    }
+
+.uk-checkbox {
+    width: 38px;
+    height: 38px;
+    margin-top: 2px;
+    border-radius: 6px;
+    border: 1px solid rgba($gray-100, 0.25);
+    background: $black-25;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    &:checked {
+        border-color: var(--join-checkbox-checked-bg, #{$primary-color});
+        background-color: var(--join-checkbox-checked-bg, #{$primary-color});
+        &:focus {
+            background-color: var(--join-checkbox-checked-bg, #{$primary-color});
+        }
+    }
+}
+
+.uk-tab {
+    margin-left: 0 !important;
+    li {
+        padding: 0 10px;
+    }
+    li.uk-active {
+        border-bottom: 2px solid $primary-color;
+    }
+    .uk-active>a {
+        border-bottom: none;
+        color: $primary-color;
+    }
+    >li>a {
+        color: $text-color;
+        font-size: 20px;
+        transition: all 0.2s ease-in-out;
+        &:hover {
+            color: $primary-color;
+        }
+    }
+    &::before {
+        border-bottom: 2px solid rgba($gray-100, 0.25);
+    }
+}
