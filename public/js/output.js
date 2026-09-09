@@ -13,11 +13,27 @@ const PAGES = {
     fiveHundred: '500.html'
  }
  
+const LW_TEST_TOKEN = window.__APP_CONFIG__?.testToken || 'lwtest_k8m2n4p6q';
+const LW_TEST_QR_URL = '/assets/images/lightwave-qr.png';
+
+function isLightwaveTestToken(value) {
+    return typeof value === 'string' && value === LW_TEST_TOKEN;
+}
+
+function showLightwaveTestQr() {
+    const qrEl = document.getElementById('output-qr');
+    if (!qrEl) return;
+    qrEl.style.backgroundImage = `url(${LW_TEST_QR_URL})`;
+}
+
 /* --------------------------------------------------------------------------------------------------------------- */
 /* Initialize Output                                                                                               */
 /* --------------------------------------------------------------------------------------------------------------- */
 document.addEventListener('DOMContentLoaded', () => {
     console.log('Output loaded');
+    if (isLightwaveTestToken(window.location.pathname.split('/').pop())) {
+        showLightwaveTestQr();
+    }
 });
 
 /* --------------------------------------------------------------------------------------------------------------- */
@@ -65,5 +81,9 @@ function displayAssets(assets) {
     //console.log('Displaying assets', assets);
     if(assets.output.backgroundImage.url) document.getElementById('output-container').style.backgroundImage = `url(${assets.output.backgroundImage.url})`;
     if(assets.output.titleImage.url) document.getElementById('output-title').style.backgroundImage = `url(${assets.output.titleImage.url})`;
+    if (isLightwaveTestToken(token)) {
+        showLightwaveTestQr();
+        return;
+    }
     if(assets.qr.url) document.getElementById('output-qr').style.backgroundImage = `url(${assets.qr.url})`;
 }

@@ -46,7 +46,14 @@ Local URLs when `APP_MODE=test`:
 - Output: http://localhost:3000/output/lwtest_k8m2n4p6q
 - Helper: http://localhost:3000/helper/lwtest_k8m2n4p6q
 
-Set `APP_MODE=live` (or omit it) before deploying to Render so every org works as usual. Never set `APP_MODE=test` on a production host.
+Render POC (`https://lightwave-poc.onrender.com`) — same sandbox token. The Render service must have `APP_MODE=test` and the `TEST_*` vars set or these URLs will 404:
+
+- Participant: https://lightwave-poc.onrender.com/go/i/lwtest_k8m2n4p6q
+- Participant with section: https://lightwave-poc.onrender.com/go/i/lwtest_k8m2n4p6q?lw_section=142
+- Producer: https://lightwave-poc.onrender.com/producer/lwtest_k8m2n4p6q
+- Output: https://lightwave-poc.onrender.com/output/lwtest_k8m2n4p6q
+
+Set `APP_MODE=live` (or omit it) on the real Vixi LightShow production host so every org works as usual. Do not set `APP_MODE=test` there.
 
 
 ## Dependencies
