@@ -65,6 +65,10 @@ const session = {
     lw_offOnlyAtMax: false,
     lw_loop: false,
     lw_followPose: false,
+    lw_offOnLower: true,
+    lw_torchMinMs: 20000,
+    lw_joinedText: 'Watch for your cue to raise your device!',
+    lw_waveCompleteText: 'Wave Complete',
   },
   displayName: null
 }

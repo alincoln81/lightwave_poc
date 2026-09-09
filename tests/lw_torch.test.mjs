@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { lw_shouldTorchBeOn } from '../public/js/lw_torch.js';
+import { lw_shouldTorchBeOn, lw_pickFollowOffMs } from '../public/js/lw_torch.js';
 import {
     lw_advancePose,
     lw_createPoseState,
@@ -74,6 +74,38 @@ describe('lw_shouldTorchBeOn', () => {
             offOnlyAtMax: true,
             latched: true,
         }), true);
+    });
+
+    it('picks an inclusive off delay between min and max', () => {
+        for (let i = 0; i < 20; i += 1) {
+            const ms = lw_pickFollowOffMs(2000, 3500);
+            assert.ok(ms >= 2000 && ms <= 3500);
+        }
+        const swapped = lw_pickFollowOffMs(4000, 2000);
+        assert.ok(swapped >= 2000 && swapped <= 4000);
+    });
+
+    it('keeps follow-pose torch on after lower until the random cap', () => {
+        assert.equal(lw_shouldTorchBeOn({
+            goActive: false,
+            raised: false,
+            fallback: false,
+            elapsedMs: 400,
+            maxMs: 2000,
+            followPose: true,
+            offOnLower: false,
+            latched: true,
+        }), true);
+        assert.equal(lw_shouldTorchBeOn({
+            goActive: false,
+            raised: false,
+            fallback: false,
+            elapsedMs: 2000,
+            maxMs: 2000,
+            followPose: true,
+            offOnLower: false,
+            latched: true,
+        }), false);
     });
 
     it('follows raise and lower with no GO or max when followPose is on', () => {

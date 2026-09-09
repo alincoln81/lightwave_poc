@@ -104,6 +104,10 @@ const session = {
         lw_offOnlyAtMax: LW_DEFAULTS.lw_offOnlyAtMax,
         lw_loop: LW_DEFAULTS.lw_loop,
         lw_followPose: LW_DEFAULTS.lw_followPose,
+        lw_offOnLower: LW_DEFAULTS.lw_offOnLower,
+        lw_torchMinMs: LW_DEFAULTS.lw_torchMinMs,
+        lw_joinedText: LW_DEFAULTS.lw_joinedText,
+        lw_waveCompleteText: LW_DEFAULTS.lw_waveCompleteText,
         paused: true,
         playing: false,
         redirectUrl: null,
@@ -1780,7 +1784,7 @@ function renderLwOccupancy(payload) {
     if (activeEl) {
         activeEl.textContent = activeSection
             ? `Active section: ${activeSection}`
-            : 'No wave in progress';
+            : 'No Wave in Progress';
         activeEl.classList.toggle('lw_active-section-live', !!activeSection);
     }
     if (!list) return;
@@ -1788,7 +1792,7 @@ function renderLwOccupancy(payload) {
     if (occupied.length === 0) {
         const empty = document.createElement('li');
         empty.className = 'uk-text-muted';
-        empty.textContent = 'No joined sections yet';
+        empty.textContent = 'No Occupied Sections Yet.';
         list.appendChild(empty);
         return;
     }
@@ -1810,73 +1814,98 @@ function renderLwOccupancy(payload) {
     }
 }
 
+function setLwPanelHidden(id, hidden) {
+    const el = document.getElementById(id);
+    if (el) el.hidden = !!hidden;
+}
+
+function syncLwLayout() {
+    const sectionWave = session.settings.lw_followPose !== true;
+    const offOnLower = session.settings.lw_offOnLower !== false;
+    setLwPanelHidden('lw_wave-fields', !sectionWave);
+    setLwPanelHidden('lw_follow-fields', sectionWave);
+    setLwPanelHidden('lw_timed-off-fields', sectionWave || offOnLower);
+    setLwPanelHidden('lw_current-wave-row', !sectionWave);
+    setLwPanelHidden('lw_occupied-wrap', !sectionWave);
+}
+
 function syncLwProducerUi() {
-    const toggle = document.getElementById('lw_mode-toggle');
+    const sectionWave = document.getElementById('lw_section-wave');
     const countdown = document.getElementById('lw_countdown-seconds');
     const delay = document.getElementById('lw_section-delay');
     const torchMax = document.getElementById('lw_torch-max');
+    const torchMaxFollow = document.getElementById('lw_torch-max-follow');
+    const torchMin = document.getElementById('lw_torch-min');
     const waiting = document.getElementById('lw_waiting-text');
-    const triggerRaise = document.getElementById('lw_trigger-raise');
-    const triggerCountdown = document.getElementById('lw_trigger-countdown');
+    const joined = document.getElementById('lw_joined-text');
+    const complete = document.getElementById('lw_wave-complete-text');
     const debugOverlay = document.getElementById('lw_debug-overlay');
     const raiseSens = document.getElementById('lw_raise-sensitivity');
     const lowerSens = document.getElementById('lw_lower-sensitivity');
-    const offOnlyMax = document.getElementById('lw_off-only-max');
+    const offOnLower = document.getElementById('lw_off-on-lower');
     const loopWave = document.getElementById('lw_loop');
-    const followPose = document.getElementById('lw_follow-pose');
     const startBtn = document.getElementById('lw_wave-start');
     const stopBtnLw = document.getElementById('lw_wave-stop');
-    if (toggle) toggle.checked = lwIsEnabled();
+    if (sectionWave) sectionWave.checked = session.settings.lw_followPose !== true;
     if (debugOverlay) debugOverlay.checked = session.settings.lw_debugOverlay === true;
-    if (followPose) followPose.checked = session.settings.lw_followPose === true;
     if (raiseSens) raiseSens.value = String(session.settings.lw_raiseSensitivity ?? 5);
     if (lowerSens) lowerSens.value = String(session.settings.lw_lowerSensitivity ?? 5);
-    if (offOnlyMax) offOnlyMax.checked = session.settings.lw_offOnlyAtMax === true;
+    if (offOnLower) offOnLower.checked = session.settings.lw_offOnLower !== false;
     if (loopWave) loopWave.checked = session.settings.lw_loop === true;
     if (countdown) countdown.value = String(session.settings.lw_countdownSeconds ?? 3);
     if (delay) delay.value = String(session.settings.lw_sectionDelayMs ?? 400);
-    if (torchMax) torchMax.value = String(session.settings.lw_torchMaxMs ?? 3000);
+    const maxValue = String(session.settings.lw_torchMaxMs ?? 3000);
+    if (torchMax) torchMax.value = maxValue;
+    if (torchMaxFollow) torchMaxFollow.value = maxValue;
+    if (torchMin) torchMin.value = String(session.settings.lw_torchMinMs ?? 20000);
     if (waiting) waiting.value = session.settings.lw_waitingText || LW_DEFAULTS.lw_waitingText;
-    const requireRaise = session.settings.lw_requireRaise !== false;
-    if (triggerRaise) triggerRaise.checked = requireRaise;
-    if (triggerCountdown) triggerCountdown.checked = !requireRaise;
+    if (joined) joined.value = session.settings.lw_joinedText || LW_DEFAULTS.lw_joinedText;
+    if (complete) complete.value = session.settings.lw_waveCompleteText || LW_DEFAULTS.lw_waveCompleteText;
     const followOn = session.settings.lw_followPose === true;
-    if (startBtn) startBtn.disabled = !lwIsEnabled() || followOn;
-    if (stopBtnLw) stopBtnLw.disabled = !lwIsEnabled();
+    if (startBtn) startBtn.disabled = followOn;
+    if (stopBtnLw) stopBtnLw.disabled = false;
+    syncLwLayout();
     setLwProgramDisabled(lwIsEnabled());
 }
 
 function persistLwFromInputs() {
-    const toggle = document.getElementById('lw_mode-toggle');
+    const sectionWave = document.getElementById('lw_section-wave');
     const countdown = document.getElementById('lw_countdown-seconds');
     const delay = document.getElementById('lw_section-delay');
     const torchMax = document.getElementById('lw_torch-max');
+    const torchMaxFollow = document.getElementById('lw_torch-max-follow');
+    const torchMin = document.getElementById('lw_torch-min');
     const waiting = document.getElementById('lw_waiting-text');
-    const triggerRaise = document.getElementById('lw_trigger-raise');
+    const joined = document.getElementById('lw_joined-text');
+    const complete = document.getElementById('lw_wave-complete-text');
     const debugOverlay = document.getElementById('lw_debug-overlay');
     const raiseSens = document.getElementById('lw_raise-sensitivity');
     const lowerSens = document.getElementById('lw_lower-sensitivity');
-    const offOnlyMax = document.getElementById('lw_off-only-max');
+    const offOnLower = document.getElementById('lw_off-on-lower');
     const loopWave = document.getElementById('lw_loop');
-    const followPose = document.getElementById('lw_follow-pose');
-    const nextMode = toggle && toggle.checked ? 'lightwave' : 'default';
+    const followOn = sectionWave ? !sectionWave.checked : session.settings.lw_followPose === true;
+    const maxFromFollow = torchMaxFollow && !torchMaxFollow.closest('[hidden]');
     const wasLightwave = session.settings.mode === 'lightwave';
-    session.settings.mode = nextMode;
+    session.settings.mode = 'lightwave';
     lw_applyLightwaveSettings(session.settings, {
-        mode: nextMode,
+        mode: 'lightwave',
         lw_countdownSeconds: countdown ? countdown.value : session.settings.lw_countdownSeconds,
         lw_sectionDelayMs: delay ? delay.value : session.settings.lw_sectionDelayMs,
-        lw_torchMaxMs: torchMax ? torchMax.value : session.settings.lw_torchMaxMs,
+        lw_torchMaxMs: maxFromFollow && torchMaxFollow
+            ? torchMaxFollow.value
+            : (torchMax ? torchMax.value : session.settings.lw_torchMaxMs),
+        lw_torchMinMs: torchMin ? torchMin.value : session.settings.lw_torchMinMs,
         lw_waitingText: waiting ? waiting.value : session.settings.lw_waitingText,
-        lw_requireRaise: triggerRaise ? triggerRaise.checked : session.settings.lw_requireRaise,
+        lw_joinedText: joined ? joined.value : session.settings.lw_joinedText,
+        lw_waveCompleteText: complete ? complete.value : session.settings.lw_waveCompleteText,
         lw_debugOverlay: debugOverlay ? debugOverlay.checked : session.settings.lw_debugOverlay,
         lw_raiseSensitivity: raiseSens ? raiseSens.value : session.settings.lw_raiseSensitivity,
         lw_lowerSensitivity: lowerSens ? lowerSens.value : session.settings.lw_lowerSensitivity,
-        lw_offOnlyAtMax: offOnlyMax ? offOnlyMax.checked : session.settings.lw_offOnlyAtMax,
         lw_loop: loopWave ? loopWave.checked : session.settings.lw_loop,
-        lw_followPose: followPose ? followPose.checked : session.settings.lw_followPose,
+        lw_followPose: followOn,
+        lw_offOnLower: offOnLower ? offOnLower.checked : session.settings.lw_offOnLower,
     });
-    if (nextMode === 'lightwave' && !wasLightwave && session.settings.activeProgram) {
+    if (!wasLightwave && session.settings.activeProgram) {
         socket.emit('stop-program', token, session.settings.activeProgram, 'effect-end');
         session.settings.activeProgram = null;
         session.settings.startDateTime = null;
@@ -1886,37 +1915,32 @@ function persistLwFromInputs() {
 }
 
 function initLwProducerControls() {
-    const toggle = document.getElementById('lw_mode-toggle');
-    const countdown = document.getElementById('lw_countdown-seconds');
-    const delay = document.getElementById('lw_section-delay');
-    const torchMax = document.getElementById('lw_torch-max');
-    const waiting = document.getElementById('lw_waiting-text');
-    const triggerRaise = document.getElementById('lw_trigger-raise');
-    const triggerCountdown = document.getElementById('lw_trigger-countdown');
-    const debugOverlay = document.getElementById('lw_debug-overlay');
-    const raiseSens = document.getElementById('lw_raise-sensitivity');
-    const lowerSens = document.getElementById('lw_lower-sensitivity');
-    const offOnlyMax = document.getElementById('lw_off-only-max');
-    const loopWave = document.getElementById('lw_loop');
-    const followPose = document.getElementById('lw_follow-pose');
+    const ids = [
+        'lw_section-wave',
+        'lw_countdown-seconds',
+        'lw_section-delay',
+        'lw_torch-max',
+        'lw_torch-max-follow',
+        'lw_torch-min',
+        'lw_waiting-text',
+        'lw_joined-text',
+        'lw_wave-complete-text',
+        'lw_debug-overlay',
+        'lw_raise-sensitivity',
+        'lw_lower-sensitivity',
+        'lw_off-on-lower',
+        'lw_loop',
+    ];
+    for (const id of ids) {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('change', persistLwFromInputs);
+    }
     const startBtn = document.getElementById('lw_wave-start');
     const stopBtnLw = document.getElementById('lw_wave-stop');
-    if (toggle) toggle.addEventListener('change', persistLwFromInputs);
-    if (countdown) countdown.addEventListener('change', persistLwFromInputs);
-    if (delay) delay.addEventListener('change', persistLwFromInputs);
-    if (torchMax) torchMax.addEventListener('change', persistLwFromInputs);
-    if (waiting) waiting.addEventListener('change', persistLwFromInputs);
-    if (triggerRaise) triggerRaise.addEventListener('change', persistLwFromInputs);
-    if (triggerCountdown) triggerCountdown.addEventListener('change', persistLwFromInputs);
-    if (debugOverlay) debugOverlay.addEventListener('change', persistLwFromInputs);
-    if (raiseSens) raiseSens.addEventListener('change', persistLwFromInputs);
-    if (lowerSens) lowerSens.addEventListener('change', persistLwFromInputs);
-    if (offOnlyMax) offOnlyMax.addEventListener('change', persistLwFromInputs);
-    if (loopWave) loopWave.addEventListener('change', persistLwFromInputs);
-    if (followPose) followPose.addEventListener('change', persistLwFromInputs);
     if (startBtn) {
         startBtn.addEventListener('click', () => {
-            if (!lwIsEnabled() || session.settings.lw_followPose === true) return;
+            if (session.settings.lw_followPose === true) return;
+            session.settings.mode = 'lightwave';
             socket.emit('lw_wave-start', {
                 token,
                 lw_torchMaxMs: session.settings.lw_torchMaxMs,

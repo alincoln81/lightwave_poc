@@ -11,15 +11,34 @@ let fallback = false;
 let requireRaise = true;
 let offOnlyAtMax = false;
 let followPose = false;
+let offOnLower = true;
 let maxMs = 3000;
+let minMs = 20000;
+let followOffMs = null;
 let torchOnAt = null;
 let desiredOn = false;
 let capTimer = null;
 
 /**
+ * Inclusive random off delay for follow-pose timed mode.
+ * @param {number} min
+ * @param {number} max
+ */
+export function lw_pickFollowOffMs(min, max) {
+    const a = Math.round(Number(min));
+    const b = Math.round(Number(max));
+    const first = Number.isFinite(a) ? a : 20000;
+    const second = Number.isFinite(b) ? b : first;
+    const lo = Math.min(first, second);
+    const hi = Math.max(first, second);
+    if (hi <= lo) return lo;
+    return lo + Math.floor(Math.random() * (hi - lo + 1));
+}
+
+/**
  * Pure gate used by tests and the live controller.
  * elapsedMs is time since torch turned on (0 if off).
- * @param {{ goActive: boolean, raised: boolean, fallback: boolean, elapsedMs: number, maxMs: number, requireRaise?: boolean, offOnlyAtMax?: boolean, latched?: boolean, followPose?: boolean }} input
+ * @param {{ goActive: boolean, raised: boolean, fallback: boolean, elapsedMs: number, maxMs: number, requireRaise?: boolean, offOnlyAtMax?: boolean, latched?: boolean, followPose?: boolean, offOnLower?: boolean }} input
  * @returns {boolean}
  */
 export function lw_shouldTorchBeOn({
@@ -32,8 +51,15 @@ export function lw_shouldTorchBeOn({
     offOnlyAtMax: keepUntilMax = false,
     latched = false,
     followPose: poseOnly = false,
+    offOnLower: dropTurnsOff = true,
 }) {
-    if (poseOnly) return !!isRaised;
+    if (poseOnly) {
+        if (dropTurnsOff) return !!isRaised;
+        const limit = Number.isFinite(cap) ? cap : 3000;
+        if (Number.isFinite(elapsedMs) && elapsedMs >= limit) return false;
+        if (isRaised) return true;
+        return !!latched;
+    }
     if (!go) return false;
     const limit = Number.isFinite(cap) ? cap : 3000;
     if (Number.isFinite(elapsedMs) && elapsedMs >= limit) return false;
@@ -61,10 +87,11 @@ async function applyDesired() {
         raised,
         fallback,
         elapsedMs: elapsedSinceOn(),
-        maxMs,
+        maxMs: followPose && !offOnLower && followOffMs !== null ? followOffMs : maxMs,
         requireRaise,
         offOnlyAtMax,
         followPose,
+        offOnLower,
         latched: torchOnAt !== null,
     });
     if (shouldOn === desiredOn && !(shouldOn && torchOnAt === null)) {
@@ -76,10 +103,17 @@ async function applyDesired() {
     desiredOn = shouldOn;
     const { setTorch } = await import('./camera-torch-access.js');
     if (shouldOn) {
-        if (torchOnAt === null) torchOnAt = Date.now();
+        if (torchOnAt === null) {
+            torchOnAt = Date.now();
+            if (followPose && !offOnLower) {
+                followOffMs = lw_pickFollowOffMs(minMs, maxMs);
+            }
+        }
         clearCapTimer();
-        if (!followPose) {
-            const remaining = Math.max(0, maxMs - elapsedSinceOn());
+        const timedFollow = followPose && !offOnLower;
+        if (!followPose || timedFollow) {
+            const limit = timedFollow && followOffMs !== null ? followOffMs : maxMs;
+            const remaining = Math.max(0, limit - elapsedSinceOn());
             capTimer = setTimeout(() => {
                 capTimer = null;
                 applyDesired();
@@ -88,6 +122,7 @@ async function applyDesired() {
         await setTorch(true);
     } else {
         torchOnAt = null;
+        followOffMs = null;
         clearCapTimer();
         await setTorch(false);
     }
@@ -99,12 +134,16 @@ export function lw_torchConfigure({
     requireRaise: nextRequireRaise,
     offOnlyAtMax: nextOffOnlyAtMax,
     followPose: nextFollowPose,
+    offOnLower: nextOffOnLower,
+    minMs: nextMin,
 } = {}) {
     if (Number.isFinite(nextMax)) maxMs = nextMax;
+    if (Number.isFinite(nextMin)) minMs = nextMin;
     if (typeof nextFallback === 'boolean') fallback = nextFallback;
     if (typeof nextRequireRaise === 'boolean') requireRaise = nextRequireRaise;
     if (typeof nextOffOnlyAtMax === 'boolean') offOnlyAtMax = nextOffOnlyAtMax;
     if (typeof nextFollowPose === 'boolean') followPose = nextFollowPose;
+    if (typeof nextOffOnLower === 'boolean') offOnLower = nextOffOnLower;
 }
 
 export async function lw_torchSetGoActive(active) {
@@ -124,6 +163,7 @@ export async function lw_torchSetRaised(isRaised) {
 export async function lw_torchOff() {
     goActive = false;
     torchOnAt = null;
+    followOffMs = null;
     desiredOn = false;
     clearCapTimer();
     const { setTorch } = await import('./camera-torch-access.js');
@@ -137,7 +177,10 @@ export function lw_torchReset() {
     requireRaise = true;
     offOnlyAtMax = false;
     followPose = false;
+    offOnLower = true;
     maxMs = 3000;
+    minMs = 20000;
+    followOffMs = null;
     torchOnAt = null;
     desiredOn = false;
     clearCapTimer();

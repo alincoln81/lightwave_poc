@@ -82,69 +82,116 @@
 
             <!-- Lightwave -->
             <div id="lw_panel" role="tabpanel" aria-labelledby="uk-tab-1">
-                <div id="lw_card" class="uk-card uk-card-default-primary uk-card-body uk-margin">
-                    <h3 class="uk-card-title uk-margin-remove-top">Lightwave</h3>
-                    <p class="uk-text-muted uk-text-small">When on, phones follow a section wave instead of audio effects. Users enter a section number (or open a link with <code>?lw_section=142</code>).</p>
-                    <div class="lw_mode-row">
-                        <label for="lw_mode-toggle">
-                            <input id="lw_mode-toggle" class="uk-checkbox" type="checkbox">
-                            Enable Lightwave mode
-                        </label>
-                        <label for="lw_debug-overlay">
-                            <input id="lw_debug-overlay" class="uk-checkbox" type="checkbox">
-                            Show phone debug text
-                        </label>
-                        <label for="lw_follow-pose">
-                            <input id="lw_follow-pose" class="uk-checkbox" type="checkbox">
-                            Turn torch on/off with raise and lower (no section or countdown)
-                        </label>
+                <div id="lw_card" class="lw_studio">
+                    <h3 class="lw_studio-title">LightWave</h3>
+                    <div class="lw_studio-grid">
+                        <section class="lw_studio-col" aria-labelledby="lw_general-heading">
+                            <h4 id="lw_general-heading" class="lw_studio-heading">General Settings</h4>
+                            <div class="lw_bar">
+                                <label class="lw_bar-label" for="lw_section-wave">Section Wave</label>
+                                <label class="switch uk-margin-remove">
+                                    <input id="lw_section-wave" class="uk-checkbox" type="checkbox">
+                                    <span class="track"><span class="thumb"></span></span>
+                                </label>
+                            </div>
+                            <div class="lw_bar">
+                                <span class="lw_bar-label">Debug Text</span>
+                                <span class="lw_bar-aside">
+                                    <span>Debug Text on Phone</span>
+                                    <label class="switch uk-margin-remove">
+                                        <input id="lw_debug-overlay" class="uk-checkbox" type="checkbox">
+                                        <span class="track"><span class="thumb"></span></span>
+                                    </label>
+                                </span>
+                            </div>
+                            <div class="lw_sens-card">
+                                <p class="lw_sens-heading">Accelerometer Sensitivity</p>
+                                <div class="lw_sens-row">
+                                    <label class="lw_sens-field" for="lw_raise-sensitivity">
+                                        <span>Raise</span>
+                                        <input id="lw_raise-sensitivity" class="uk-input" type="number" min="1" max="10" step="1" value="5">
+                                    </label>
+                                    <label class="lw_sens-field" for="lw_lower-sensitivity">
+                                        <span>Lower</span>
+                                        <input id="lw_lower-sensitivity" class="uk-input" type="number" min="1" max="10" step="1" value="5">
+                                    </label>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="lw_studio-col" aria-labelledby="lw_wave-settings-heading">
+                            <h4 id="lw_wave-settings-heading" class="lw_studio-heading">Section Wave Settings</h4>
+                            <div id="lw_follow-fields">
+                                <div class="lw_bar">
+                                    <label class="lw_bar-label" for="lw_off-on-lower">Torch off on Lower</label>
+                                    <label class="switch uk-margin-remove">
+                                        <input id="lw_off-on-lower" class="uk-checkbox" type="checkbox" checked>
+                                        <span class="track"><span class="thumb"></span></span>
+                                    </label>
+                                </div>
+                                <div id="lw_timed-off-fields">
+                                    <div class="lw_bar">
+                                        <label class="lw_bar-label" for="lw_torch-min">Torch min (ms)</label>
+                                        <input id="lw_torch-min" class="uk-input lw_bar-input" type="number" min="200" max="120000" step="100" value="20000">
+                                    </div>
+                                    <div class="lw_bar">
+                                        <label class="lw_bar-label" for="lw_torch-max">Torch max (ms)</label>
+                                        <input id="lw_torch-max-follow" class="uk-input lw_bar-input" type="number" min="200" max="120000" step="100" value="35000">
+                                    </div>
+                                </div>
+                                <div class="lw_bar">
+                                    <label class="lw_bar-label" for="lw_joined-text">Joined Text</label>
+                                    <input id="lw_joined-text" class="uk-input lw_bar-input lw_bar-input-wide" type="text" value="Watch for your cue to raise your device!">
+                                </div>
+                            </div>
+                            <div id="lw_wave-fields">
+                                <div class="lw_bar">
+                                    <label class="lw_bar-label" for="lw_loop">Loop Wave</label>
+                                    <label class="switch uk-margin-remove">
+                                        <input id="lw_loop" class="uk-checkbox" type="checkbox">
+                                        <span class="track"><span class="thumb"></span></span>
+                                    </label>
+                                </div>
+                                <div class="lw_bar">
+                                    <label class="lw_bar-label" for="lw_countdown-seconds">Countdown (sec)</label>
+                                    <input id="lw_countdown-seconds" class="uk-input lw_bar-input" type="number" min="1" max="10" step="1" value="3">
+                                </div>
+                                <div class="lw_bar">
+                                    <label class="lw_bar-label" for="lw_section-delay">Section Delay (ms)</label>
+                                    <input id="lw_section-delay" class="uk-input lw_bar-input" type="number" min="50" max="30000" step="50" value="400">
+                                </div>
+                                <div class="lw_bar">
+                                    <label class="lw_bar-label" for="lw_torch-max">Torch max (ms)</label>
+                                    <input id="lw_torch-max" class="uk-input lw_bar-input" type="number" min="200" max="120000" step="100" value="3000">
+                                </div>
+                                <div class="lw_bar">
+                                    <label class="lw_bar-label" for="lw_waiting-text">Waiting Text</label>
+                                    <input id="lw_waiting-text" class="uk-input lw_bar-input lw_bar-input-wide" type="text" value="You're in section {section}. Get ready.">
+                                </div>
+                                <div class="lw_bar">
+                                    <label class="lw_bar-label" for="lw_wave-complete-text">Wave Complete Text</label>
+                                    <input id="lw_wave-complete-text" class="uk-input lw_bar-input lw_bar-input-wide" type="text" value="Wave Complete">
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="lw_studio-col" aria-labelledby="lw_controls-heading">
+                            <h4 id="lw_controls-heading" class="lw_studio-heading">Controls</h4>
+                            <div class="lw_control-actions">
+                                <button type="button" id="lw_wave-start" class="lw_btn-start">Start Wave</button>
+                                <button type="button" id="lw_wave-stop" class="lw_btn-stop">Stop Wave</button>
+                            </div>
+                            <div id="lw_current-wave-row" class="lw_bar">
+                                <span class="lw_bar-label">Current Wave</span>
+                                <span id="lw_active-section" class="lw_bar-value">No Wave in Progress</span>
+                            </div>
+                        </section>
                     </div>
-                    <fieldset class="lw_trigger-row">
-                        <legend>Torch after countdown</legend>
-                        <label for="lw_trigger-countdown">
-                            <input id="lw_trigger-countdown" name="lw_torch-trigger" class="uk-radio" type="radio" value="countdown">
-                            Turn torch on for every phone in the section
-                        </label>
-                        <label for="lw_trigger-raise">
-                            <input id="lw_trigger-raise" name="lw_torch-trigger" class="uk-radio" type="radio" value="raise" checked>
-                            Only turn torch on if a raised phone is detected
-                        </label>
-                        <label for="lw_off-only-max">
-                            <input id="lw_off-only-max" class="uk-checkbox" type="checkbox">
-                            Turn torch off only after max time (ignore lowering)
-                        </label>
-                    </fieldset>
-                    <div class="lw_timing-row">
-                        <label for="lw_raise-sensitivity">Raise sensitivity (1 long lift – 10 short lift)</label>
-                        <input id="lw_raise-sensitivity" class="uk-input" type="number" min="1" max="10" step="1" value="5">
-                        <label for="lw_lower-sensitivity">Lower sensitivity (1 long drop – 10 short drop)</label>
-                        <input id="lw_lower-sensitivity" class="uk-input" type="number" min="1" max="10" step="1" value="5">
-                    </div>
-                    <div class="lw_mode-row">
-                        <label for="lw_loop">
-                            <input id="lw_loop" class="uk-checkbox" type="checkbox">
-                            Loop wave through sections
-                        </label>
-                    </div>
-                    <div class="lw_timing-row">
-                        <label for="lw_countdown-seconds">Countdown (sec)</label>
-                        <input id="lw_countdown-seconds" class="uk-input" type="number" min="1" max="10" step="1" value="3">
-                        <label for="lw_section-delay">Section delay (ms)</label>
-                        <input id="lw_section-delay" class="uk-input" type="number" min="50" max="5000" step="50" value="400">
-                        <label for="lw_torch-max">Torch max (ms)</label>
-                        <input id="lw_torch-max" class="uk-input" type="number" min="200" max="10000" step="100" value="3000">
-                    </div>
-                    <div class="lw_timing-row">
-                        <label class="uk-width-1-1" for="lw_waiting-text">Waiting text</label>
-                        <input id="lw_waiting-text" class="uk-input" type="text" value="You're in section {section}. Get ready.">
-                    </div>
-                    <div class="lw_actions">
-                        <button type="button" id="lw_wave-start" class="uk-button uk-button-primary">Start Wave</button>
-                        <button type="button" id="lw_wave-stop" class="uk-button uk-button-default">Stop Wave</button>
-                    </div>
-                    <p id="lw_active-section" class="lw_active-section">No wave in progress</p>
-                    <h4 class="uk-margin-small-bottom">Occupied sections</h4>
-                    <ul id="lw_occupancy"></ul>
+
+                    <section id="lw_occupied-wrap" class="lw_occupied" aria-labelledby="lw_occupied-heading">
+                        <h4 id="lw_occupied-heading" class="lw_studio-heading">Occupied Sections</h4>
+                        <ul id="lw_occupancy"></ul>
+                    </section>
                 </div>
             </div>
 

@@ -8,6 +8,8 @@ let tickTimer = null;
 let localGoAt = null;
 let countdownSeconds = 3;
 let waitingTemplate = "You're in section {section}. Get ready.";
+let waveCompleteTemplate = 'Wave Complete';
+let joinedTemplate = 'Watch for your cue to raise your device!';
 let sectionLabel = '';
 
 function overlayEl() {
@@ -30,6 +32,29 @@ export function lw_setWaitingText(template) {
     if (typeof template === 'string' && template.trim()) {
         waitingTemplate = template;
     }
+}
+
+export function lw_setWaveCompleteText(text) {
+    if (typeof text === 'string' && text.trim()) {
+        waveCompleteTemplate = text.trim();
+    }
+}
+
+export function lw_setJoinedText(text) {
+    if (typeof text === 'string' && text.trim()) {
+        joinedTemplate = text.trim();
+    }
+}
+
+export function lw_joinedCopy() {
+    return joinedTemplate;
+}
+
+export function lw_showJoined() {
+    lw_stopCountdown(false);
+    lw_showSectionForm(false);
+    lw_setOverlayText(lw_joinedCopy());
+    lw_showOverlay(true);
 }
 
 export function lw_setCountdownSeconds(seconds) {
@@ -92,7 +117,7 @@ export function lw_showLowerPhone() {
 }
 
 export function lw_waveCompleteCopy() {
-    return 'Wave Complete';
+    return waveCompleteTemplate;
 }
 
 export function lw_showWaveComplete() {

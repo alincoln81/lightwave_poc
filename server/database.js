@@ -277,7 +277,7 @@ async function setSettings(data, firestoreRoot, type) {
       settings.mode = data.mode === 'lightwave' ? 'lightwave' : (data.mode || settings.mode || 'default');
       const lwTorch = Number(data.lw_torchMaxMs);
       settings.lw_torchMaxMs = Number.isFinite(lwTorch)
-        ? Math.min(10000, Math.max(200, Math.round(lwTorch)))
+        ? Math.min(120000, Math.max(200, Math.round(lwTorch)))
         : (settings.lw_torchMaxMs ?? 3000);
       const lwCount = Number(data.lw_countdownSeconds);
       settings.lw_countdownSeconds = Number.isFinite(lwCount)
@@ -285,11 +285,21 @@ async function setSettings(data, firestoreRoot, type) {
         : (settings.lw_countdownSeconds ?? 3);
       const lwDelay = Number(data.lw_sectionDelayMs);
       settings.lw_sectionDelayMs = Number.isFinite(lwDelay)
-        ? Math.min(5000, Math.max(50, Math.round(lwDelay)))
+        ? Math.min(30000, Math.max(50, Math.round(lwDelay)))
         : (settings.lw_sectionDelayMs ?? 400);
+      const lwTorchMin = Number(data.lw_torchMinMs);
+      settings.lw_torchMinMs = Number.isFinite(lwTorchMin)
+        ? Math.min(120000, Math.max(200, Math.round(lwTorchMin)))
+        : (settings.lw_torchMinMs ?? 20000);
       settings.lw_waitingText = (typeof data.lw_waitingText === 'string' && data.lw_waitingText.trim())
         ? data.lw_waitingText.trim()
         : (settings.lw_waitingText || "You're in section {section}. Get ready.");
+      settings.lw_joinedText = (typeof data.lw_joinedText === 'string' && data.lw_joinedText.trim())
+        ? data.lw_joinedText.trim()
+        : (settings.lw_joinedText || 'Watch for your cue to raise your device!');
+      settings.lw_waveCompleteText = (typeof data.lw_waveCompleteText === 'string' && data.lw_waveCompleteText.trim())
+        ? data.lw_waveCompleteText.trim()
+        : (settings.lw_waveCompleteText || 'Wave Complete');
       settings.lw_requireRaise = data.lw_requireRaise !== false;
       settings.lw_debugOverlay = data.lw_debugOverlay === true;
       const lwRaise = Number(data.lw_raiseSensitivity);
@@ -303,6 +313,7 @@ async function setSettings(data, firestoreRoot, type) {
       settings.lw_offOnlyAtMax = data.lw_offOnlyAtMax === true;
       settings.lw_loop = data.lw_loop === true;
       settings.lw_followPose = data.lw_followPose === true;
+      settings.lw_offOnLower = data.lw_offOnLower !== false;
       settings.paused = data.paused;
       settings.playing = data.playing;
       settings.redirectUrl = data.redirectUrl;

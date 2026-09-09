@@ -538,6 +538,8 @@ Producer Stop / mode default → lw_wave-stop / lw_mode.stop → torch off
 | Raise 8 / lower 2 / torch 2000 / start lowered | Defaults raise 5, lower 5, torch max 3000; pose starts `neutral` until first samples set the home hold | Owner request after C | Raise/lower measured from the initial pose, not an assumed lowered start |
 | Wave always requires section + countdown | Optional `lw_followPose`: torch on while raised, off while lowered; no section, waiting, or countdown | Owner request after C | Start Wave is disabled in this mode |
 | Raise easier than lower at the same slider | At 5/5, raise needs more travel than lower | Raise was too hot, lower too stiff | Phone debug shows travel vs remaining |
+| Single Lightwave form | Three-column studio UI; Section Wave toggle swaps wave vs free-pose fields | Owner mock | Joined text, torch min, off-on-lower, wave-complete text |
+| Follow-pose torch only tracks raise/lower | If off-on-lower is off, each phone picks a random off delay between torch min and max | Owner request | Torches do not all go dark together |
 
 ### C.5 Skipped or deferred work
 
@@ -793,3 +795,4 @@ Producer Stop / mode default → lw_wave-stop / lw_mode.stop → torch off
 | CL-010 | 2026-09-09 | edit | C | Defaults raise/lower 5, torch max 3000; initial pose is neutral until calibrated | Amber | — |
 | CL-011 | 2026-09-09 | edit | C | Follow-pose toggle: torch tracks raise/lower without section or countdown | Amber | — |
 | CL-012 | 2026-09-09 | edit | C | Travel debug on phone; raise harder / lower easier at the same slider | Amber | — |
+| CL-013 | 2026-09-09 | edit | C | Lightwave studio UI; joined text; random torch-off between min and max | Amber | — |

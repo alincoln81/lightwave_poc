@@ -27,11 +27,11 @@ import {
 import {
     lw_setWaitingText,
     lw_setCountdownSeconds,
+    lw_setWaveCompleteText,
+    lw_setJoinedText,
     lw_showWaiting,
+    lw_showJoined,
     lw_hideAll,
-    lw_showOverlay,
-    lw_setOverlayText,
-    lw_stopCountdown,
 } from './lw_countdown.js';
 import { lw_waveStart, lw_waveSetSection, lw_waveReset, lw_waveSetFollowPose } from './lw_wave.js';
 
@@ -47,6 +47,10 @@ export const LW_DEFAULTS = {
     lw_offOnlyAtMax: false,
     lw_loop: false,
     lw_followPose: false,
+    lw_offOnLower: true,
+    lw_torchMinMs: 20000,
+    lw_joinedText: 'Watch for your cue to raise your device!',
+    lw_waveCompleteText: 'Wave Complete',
 };
 
 let active = false;
@@ -75,9 +79,10 @@ export function lw_applyLightwaveSettings(target, settings) {
     if (!target) return;
     const src = settings || {};
     target.mode = lw_normalizeMode(src.mode);
-    target.lw_torchMaxMs = clampInt(src.lw_torchMaxMs, 200, 10000, target.lw_torchMaxMs ?? LW_DEFAULTS.lw_torchMaxMs);
+    target.lw_torchMaxMs = clampInt(src.lw_torchMaxMs, 200, 120000, target.lw_torchMaxMs ?? LW_DEFAULTS.lw_torchMaxMs);
+    target.lw_torchMinMs = clampInt(src.lw_torchMinMs, 200, 120000, target.lw_torchMinMs ?? LW_DEFAULTS.lw_torchMinMs);
     target.lw_countdownSeconds = clampInt(src.lw_countdownSeconds, 1, 10, target.lw_countdownSeconds ?? LW_DEFAULTS.lw_countdownSeconds);
-    target.lw_sectionDelayMs = clampInt(src.lw_sectionDelayMs, 50, 5000, target.lw_sectionDelayMs ?? LW_DEFAULTS.lw_sectionDelayMs);
+    target.lw_sectionDelayMs = clampInt(src.lw_sectionDelayMs, 50, 30000, target.lw_sectionDelayMs ?? LW_DEFAULTS.lw_sectionDelayMs);
     if (typeof src.lw_waitingText === 'string' && src.lw_waitingText.trim()) {
         target.lw_waitingText = src.lw_waitingText.trim();
     } else if (!target.lw_waitingText) {
@@ -109,6 +114,21 @@ export function lw_applyLightwaveSettings(target, settings) {
         target.lw_followPose = src.lw_followPose;
     } else if (typeof target.lw_followPose !== 'boolean') {
         target.lw_followPose = LW_DEFAULTS.lw_followPose;
+    }
+    if (typeof src.lw_offOnLower === 'boolean') {
+        target.lw_offOnLower = src.lw_offOnLower;
+    } else if (typeof target.lw_offOnLower !== 'boolean') {
+        target.lw_offOnLower = LW_DEFAULTS.lw_offOnLower;
+    }
+    if (typeof src.lw_joinedText === 'string' && src.lw_joinedText.trim()) {
+        target.lw_joinedText = src.lw_joinedText.trim();
+    } else if (!target.lw_joinedText) {
+        target.lw_joinedText = LW_DEFAULTS.lw_joinedText;
+    }
+    if (typeof src.lw_waveCompleteText === 'string' && src.lw_waveCompleteText.trim()) {
+        target.lw_waveCompleteText = src.lw_waveCompleteText.trim();
+    } else if (!target.lw_waveCompleteText) {
+        target.lw_waveCompleteText = LW_DEFAULTS.lw_waveCompleteText;
     }
 }
 
@@ -237,26 +257,26 @@ function poseReporterOptions() {
 }
 
 function applyFollowPoseUi() {
-    lw_stopCountdown(false);
-    lw_setOverlayText('');
-    if (ctx?.settings?.lw_debugOverlay) {
-        lw_showOverlay(true);
-    } else {
-        lw_showOverlay(false);
-    }
+    const settings = ctx?.settings || {};
+    lw_setJoinedText(settings.lw_joinedText || LW_DEFAULTS.lw_joinedText);
+    lw_showJoined();
 }
 
 function applyTimingFromSettings() {
     const settings = ctx?.settings || {};
     const follow = lw_followPoseEnabled(settings);
     lw_setWaitingText(settings.lw_waitingText || LW_DEFAULTS.lw_waitingText);
+    lw_setWaveCompleteText(settings.lw_waveCompleteText || LW_DEFAULTS.lw_waveCompleteText);
+    lw_setJoinedText(settings.lw_joinedText || LW_DEFAULTS.lw_joinedText);
     lw_setCountdownSeconds(settings.lw_countdownSeconds || LW_DEFAULTS.lw_countdownSeconds);
     lw_torchConfigure({
         maxMs: settings.lw_torchMaxMs || LW_DEFAULTS.lw_torchMaxMs,
+        minMs: settings.lw_torchMinMs || LW_DEFAULTS.lw_torchMinMs,
         fallback: lastPermission === 'denied' || lastPermission === 'unsupported',
         requireRaise: settings.lw_requireRaise !== false,
         offOnlyAtMax: settings.lw_offOnlyAtMax === true,
         followPose: follow,
+        offOnLower: settings.lw_offOnLower !== false,
     });
     lw_poseConfigure({
         raiseSensitivity: settings.lw_raiseSensitivity,
