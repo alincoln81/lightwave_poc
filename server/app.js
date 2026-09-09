@@ -751,6 +751,37 @@ io.on('connection', async (socket) => {
         if (token) io.to(token).emit('show-unlocked');
     });
 
+    socket.on('lw_pose-log', (payload = {}) => {
+        const kinds = new Set(['permission', 'first-sample', 'no-sample', 'pose', 'heartbeat', 'stop']);
+        const kind = payload && payload.kind;
+        if (!kinds.has(kind)) return;
+        if (typeof payload.permission === 'string') {
+            socket.data.lw_motionPermission = payload.permission;
+        }
+        const samples = Number(payload.samples);
+        if (kind === 'first-sample' || (Number.isFinite(samples) && samples > 0)) {
+            socket.data.lw_motionSampling = true;
+        }
+        console.log('### lw_pose', {
+            token: socket.data.token,
+            socketId: socket.id,
+            section: socket.data.lw_section || null,
+            kind,
+            permission: payload.permission,
+            pose: payload.pose,
+            samples: Number.isFinite(samples) ? samples : payload.samples,
+            angleDeg: payload.angleDeg,
+            torchUp: payload.torchUp,
+        });
+        if (kind === 'permission' || kind === 'first-sample' || kind === 'no-sample') {
+            try {
+                lwWave.lw_emitStatus(io, socket.data.token);
+            } catch (e) {
+                console.error('### lw_emitStatus error (lw_pose-log)', e);
+            }
+        }
+    });
+
     socket.on('lw_section', (payload = {}) => {
         const token = payload.token || socket.data.token;
         if (socket.data.role !== 'user') return;

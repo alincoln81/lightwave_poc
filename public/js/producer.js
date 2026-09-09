@@ -98,6 +98,7 @@ const session = {
         lw_sectionDelayMs: LW_DEFAULTS.lw_sectionDelayMs,
         lw_waitingText: LW_DEFAULTS.lw_waitingText,
         lw_requireRaise: LW_DEFAULTS.lw_requireRaise,
+        lw_debugOverlay: LW_DEFAULTS.lw_debugOverlay,
         paused: true,
         playing: false,
         redirectUrl: null,
@@ -1795,7 +1796,9 @@ function renderLwOccupancy(payload) {
         section.textContent = `Section ${row.section}`;
         const count = document.createElement('span');
         const people = Number(row.count) === 1 ? '1 participant' : `${row.count} participants`;
-        count.textContent = people;
+        const granted = Number(row.motionGranted) || 0;
+        const sampling = Number(row.sampling) || 0;
+        count.textContent = `${people} · motion ${granted} · sampling ${sampling}`;
         item.appendChild(section);
         item.appendChild(count);
         list.appendChild(item);
@@ -1810,9 +1813,11 @@ function syncLwProducerUi() {
     const waiting = document.getElementById('lw_waiting-text');
     const triggerRaise = document.getElementById('lw_trigger-raise');
     const triggerCountdown = document.getElementById('lw_trigger-countdown');
+    const debugOverlay = document.getElementById('lw_debug-overlay');
     const startBtn = document.getElementById('lw_wave-start');
     const stopBtnLw = document.getElementById('lw_wave-stop');
     if (toggle) toggle.checked = lwIsEnabled();
+    if (debugOverlay) debugOverlay.checked = session.settings.lw_debugOverlay === true;
     if (countdown) countdown.value = String(session.settings.lw_countdownSeconds ?? 3);
     if (delay) delay.value = String(session.settings.lw_sectionDelayMs ?? 400);
     if (torchMax) torchMax.value = String(session.settings.lw_torchMaxMs ?? 2000);
@@ -1832,6 +1837,7 @@ function persistLwFromInputs() {
     const torchMax = document.getElementById('lw_torch-max');
     const waiting = document.getElementById('lw_waiting-text');
     const triggerRaise = document.getElementById('lw_trigger-raise');
+    const debugOverlay = document.getElementById('lw_debug-overlay');
     const nextMode = toggle && toggle.checked ? 'lightwave' : 'default';
     const wasLightwave = session.settings.mode === 'lightwave';
     session.settings.mode = nextMode;
@@ -1842,6 +1848,7 @@ function persistLwFromInputs() {
         lw_torchMaxMs: torchMax ? torchMax.value : session.settings.lw_torchMaxMs,
         lw_waitingText: waiting ? waiting.value : session.settings.lw_waitingText,
         lw_requireRaise: triggerRaise ? triggerRaise.checked : session.settings.lw_requireRaise,
+        lw_debugOverlay: debugOverlay ? debugOverlay.checked : session.settings.lw_debugOverlay,
     });
     if (nextMode === 'lightwave' && !wasLightwave && session.settings.activeProgram) {
         socket.emit('stop-program', token, session.settings.activeProgram, 'effect-end');
@@ -1860,6 +1867,7 @@ function initLwProducerControls() {
     const waiting = document.getElementById('lw_waiting-text');
     const triggerRaise = document.getElementById('lw_trigger-raise');
     const triggerCountdown = document.getElementById('lw_trigger-countdown');
+    const debugOverlay = document.getElementById('lw_debug-overlay');
     const startBtn = document.getElementById('lw_wave-start');
     const stopBtnLw = document.getElementById('lw_wave-stop');
     if (toggle) toggle.addEventListener('change', persistLwFromInputs);
@@ -1869,6 +1877,7 @@ function initLwProducerControls() {
     if (waiting) waiting.addEventListener('change', persistLwFromInputs);
     if (triggerRaise) triggerRaise.addEventListener('change', persistLwFromInputs);
     if (triggerCountdown) triggerCountdown.addEventListener('change', persistLwFromInputs);
+    if (debugOverlay) debugOverlay.addEventListener('change', persistLwFromInputs);
     if (startBtn) {
         startBtn.addEventListener('click', () => {
             if (!lwIsEnabled()) return;

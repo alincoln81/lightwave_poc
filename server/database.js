@@ -291,6 +291,7 @@ async function setSettings(data, firestoreRoot, type) {
         ? data.lw_waitingText.trim()
         : (settings.lw_waitingText || "You're in section {section}. Get ready.");
       settings.lw_requireRaise = data.lw_requireRaise !== false;
+      settings.lw_debugOverlay = data.lw_debugOverlay === true;
       settings.paused = data.paused;
       settings.playing = data.playing;
       settings.redirectUrl = data.redirectUrl;

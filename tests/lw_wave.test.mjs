@@ -43,8 +43,20 @@ describe('lw_collectOccupiedFromSockets', () => {
             { data: { role: 'user', torch: true, lw_section: 'nope' } },
         ];
         assert.deepEqual(lw_collectOccupiedFromSockets(sockets), [
-            { section: '101', count: 1 },
-            { section: '110', count: 2 },
+            { section: '101', count: 1, motionGranted: 0, sampling: 0 },
+            { section: '110', count: 2, motionGranted: 0, sampling: 0 },
+        ]);
+    });
+
+    it('counts motion granted and sampling per section', () => {
+        const sockets = [
+            { data: { role: 'user', torch: true, lw_section: '101', lw_motionPermission: 'granted', lw_motionSampling: true } },
+            { data: { role: 'user', torch: true, lw_section: '101', lw_motionPermission: 'denied' } },
+            { data: { role: 'user', torch: true, lw_section: '110', lw_motionPermission: 'granted' } },
+        ];
+        assert.deepEqual(lw_collectOccupiedFromSockets(sockets), [
+            { section: '101', count: 2, motionGranted: 1, sampling: 1 },
+            { section: '110', count: 1, motionGranted: 1, sampling: 0 },
         ]);
     });
 });

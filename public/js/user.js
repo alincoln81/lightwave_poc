@@ -58,6 +58,7 @@ const session = {
     lw_sectionDelayMs: 400,
     lw_waitingText: "You're in section {section}. Get ready.",
     lw_requireRaise: true,
+    lw_debugOverlay: false,
   },
   displayName: null
 }

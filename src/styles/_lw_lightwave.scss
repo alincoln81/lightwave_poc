@@ -24,6 +24,16 @@
     letter-spacing: 0.02em;
 }
 
+#lw_debug {
+    margin: 12px 0 0;
+    max-width: 28rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    line-height: 1.3;
+    letter-spacing: 0.02em;
+    color: rgba(255, 255, 255, 0.72);
+}
+
 #lw_join-section {
     display: none;
     flex-direction: column;

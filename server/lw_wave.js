@@ -35,8 +35,8 @@ function lw_compareSections(a, b) {
 }
 
 /**
- * @param {Array<{ data?: { role?: string, torch?: boolean, lw_section?: string } }>} sockets
- * @returns {{ section: string, count: number }[]}
+ * @param {Array<{ data?: { role?: string, torch?: boolean, lw_section?: string, lw_motionPermission?: string, lw_motionSampling?: boolean } }>} sockets
+ * @returns {{ section: string, count: number, motionGranted: number, sampling: number }[]}
  */
 function lw_collectOccupiedFromSockets(sockets) {
     const counts = {};
@@ -46,11 +46,16 @@ function lw_collectOccupiedFromSockets(sockets) {
         if (data.role !== 'user' || !data.torch) continue;
         const section = lw_normalizeSection(data.lw_section);
         if (!section) continue;
-        counts[section] = (counts[section] || 0) + 1;
+        if (!counts[section]) {
+            counts[section] = { section, count: 0, motionGranted: 0, sampling: 0 };
+        }
+        counts[section].count += 1;
+        if (data.lw_motionPermission === 'granted') counts[section].motionGranted += 1;
+        if (data.lw_motionSampling) counts[section].sampling += 1;
     }
     return Object.keys(counts)
         .sort(lw_compareSections)
-        .map((section) => ({ section, count: counts[section] }));
+        .map((section) => counts[section]);
 }
 
 function lw_socketsInRoom(io, token) {
