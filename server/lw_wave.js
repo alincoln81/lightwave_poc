@@ -165,6 +165,8 @@ function lw_startWave(io, token, timing = {}) {
     const lw_countdownSeconds = Number.isFinite(countdownSeconds) ? countdownSeconds : 3;
     const lw_sectionDelayMs = Number.isFinite(delayMs) ? delayMs : 400;
     const lw_requireRaise = timing.lw_requireRaise !== false;
+    const lw_offOnlyAtMax = timing.lw_offOnlyAtMax === true;
+    const lw_loop = timing.lw_loop === true;
     const sentAt = Date.now();
     const waveId = `lw_${sentAt}`;
     const occupied = lw_collectOccupied(io, token);
@@ -181,6 +183,15 @@ function lw_startWave(io, token, timing = {}) {
         torchMaxMs: lw_torchMaxMs,
         activeSection: null,
         timers,
+        loop: lw_loop,
+        timing: {
+            lw_torchMaxMs,
+            lw_countdownSeconds,
+            lw_sectionDelayMs,
+            lw_requireRaise,
+            lw_offOnlyAtMax,
+            lw_loop,
+        },
     };
     waveStateByToken.set(token, state);
     for (const row of schedule) {
@@ -194,10 +205,15 @@ function lw_startWave(io, token, timing = {}) {
     }
     if (schedule.length) {
         const last = schedule[schedule.length - 1];
-        const endDelay = Math.max(0, last.goAt + lw_torchMaxMs - Date.now());
+        const loopGapMs = lw_loop ? 4500 : 0;
+        const endDelay = Math.max(0, last.goAt + lw_torchMaxMs + loopGapMs - Date.now());
         timers.push(setTimeout(() => {
             const current = waveStateByToken.get(token);
             if (!current || current.waveId !== waveId) return;
+            if (current.loop) {
+                lw_startWave(io, token, current.timing);
+                return;
+            }
             current.activeSection = null;
             lw_emitStatus(io, token);
             lw_clearWaveTimers(token);
@@ -213,6 +229,8 @@ function lw_startWave(io, token, timing = {}) {
             lw_torchMaxMs,
             lw_countdownSeconds,
             lw_requireRaise,
+            lw_offOnlyAtMax,
+            lw_loop,
         };
         for (const socket of sockets) {
             if (socket.data && socket.data.role === 'user' && lw_normalizeSection(socket.data.lw_section) === row.section) {

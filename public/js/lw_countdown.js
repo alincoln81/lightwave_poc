@@ -91,11 +91,22 @@ export function lw_showLowerPhone() {
     lw_showOverlay(true);
 }
 
+export function lw_waveCompleteCopy() {
+    return 'Wave Complete';
+}
+
+export function lw_showWaveComplete() {
+    lw_stopCountdown(false);
+    lw_showSectionForm(false);
+    lw_setOverlayText(lw_waveCompleteCopy());
+    lw_showOverlay(true);
+}
+
 function paintFromNow(now) {
     if (localGoAt === null) return;
     const remainingMs = localGoAt - now;
     const countdownMs = countdownSeconds * 1000;
-    if (remainingMs > countdownMs) {
+    if (remainingMs >= countdownMs) {
         lw_setOverlayText(lw_waitingCopy(sectionLabel));
         return;
     }

@@ -105,7 +105,23 @@
                             <input id="lw_trigger-raise" name="lw_torch-trigger" class="uk-radio" type="radio" value="raise" checked>
                             Only turn torch on if a raised phone is detected
                         </label>
+                        <label for="lw_off-only-max">
+                            <input id="lw_off-only-max" class="uk-checkbox" type="checkbox">
+                            Turn torch off only after max time (ignore lowering)
+                        </label>
                     </fieldset>
+                    <div class="lw_timing-row">
+                        <label for="lw_raise-sensitivity">Raise sensitivity (1 hard – 10 subtle)</label>
+                        <input id="lw_raise-sensitivity" class="uk-input" type="number" min="1" max="10" step="1" value="8">
+                        <label for="lw_lower-sensitivity">Lower sensitivity (1 extreme – 10 easy)</label>
+                        <input id="lw_lower-sensitivity" class="uk-input" type="number" min="1" max="10" step="1" value="2">
+                    </div>
+                    <div class="lw_mode-row">
+                        <label for="lw_loop">
+                            <input id="lw_loop" class="uk-checkbox" type="checkbox">
+                            Loop wave through sections
+                        </label>
+                    </div>
                     <div class="lw_timing-row">
                         <label for="lw_countdown-seconds">Countdown (sec)</label>
                         <input id="lw_countdown-seconds" class="uk-input" type="number" min="1" max="10" step="1" value="3">

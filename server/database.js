@@ -292,6 +292,16 @@ async function setSettings(data, firestoreRoot, type) {
         : (settings.lw_waitingText || "You're in section {section}. Get ready.");
       settings.lw_requireRaise = data.lw_requireRaise !== false;
       settings.lw_debugOverlay = data.lw_debugOverlay === true;
+      const lwRaise = Number(data.lw_raiseSensitivity);
+      settings.lw_raiseSensitivity = Number.isFinite(lwRaise)
+        ? Math.min(10, Math.max(1, Math.round(lwRaise)))
+        : (settings.lw_raiseSensitivity ?? 8);
+      const lwLower = Number(data.lw_lowerSensitivity);
+      settings.lw_lowerSensitivity = Number.isFinite(lwLower)
+        ? Math.min(10, Math.max(1, Math.round(lwLower)))
+        : (settings.lw_lowerSensitivity ?? 2);
+      settings.lw_offOnlyAtMax = data.lw_offOnlyAtMax === true;
+      settings.lw_loop = data.lw_loop === true;
       settings.paused = data.paused;
       settings.playing = data.playing;
       settings.redirectUrl = data.redirectUrl;

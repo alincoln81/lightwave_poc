@@ -529,7 +529,11 @@ Producer Stop / mode default → lw_wave-stop / lw_mode.stop → torch off
 | Pose-gated torch only | Producer `lw_requireRaise` (default true). False = torch on at GO for every phone in the section | Owner request after C | Cue and settings carry `lw_requireRaise` |
 | Lightwave card on Show Controls | Own producer tab between Show Controls and Program Builder | Owner request after C | Tab ids after Lightwave shifted by one |
 | Join leaves torch on (`startTorchFlow`) | After Lightwave join, `setTorch(false)` and hide `#info-text` | Owner request after C | Torch stays off until GO + raise (or countdown-only mode) |
-| After GO, overlay returns to waiting | Overlay shows **Lower your Phone** for 2.5s when the torch window ends | Owner request after C | Then waiting copy until the next wave |
+| After GO, overlay returns to waiting | Overlay shows **Lower your Phone** then **Wave Complete** | Owner request after C | Looping returns to waiting before the next countdown |
+| Fixed pose thresholds | Producer raise/lower sensitivity 1–10; default raise 8 / lower 2 | Owner request after C | Subtle raise, extreme lower |
+| Torch off on lower | Optional `lw_offOnlyAtMax` ignores lowering until torch max | Owner request after C | Checkbox on Lightwave tab |
+| Single pass wave | Optional `lw_loop` restarts the occupied-section pass after a gap | Owner request after C | Stop Wave ends the loop |
+| Settings update always calls `lw_start` | If already running, only re-apply timing/sensitivity | Live slider changes must not reset overlay or torch | Pose thresholds update without interrupting a pass |
 
 ### C.5 Skipped or deferred work
 
@@ -780,3 +784,4 @@ Producer Stop / mode default → lw_wave-stop / lw_mode.stop → torch off
 | CL-005 | 2026-09-09 | edit | C | Build complete: Lightwave mode, wave schedule, pose-gated torch, unit tests + production build | Amber | — |
 | CL-006 | 2026-09-09 | edit | C | Torch off until raise; hide joined copy; producer torch-trigger + occupancy/active section; Lightwave as its own tab | Amber | — |
 | CL-007 | 2026-09-09 | edit | C | After the GO window, participant overlay shows “Lower your Phone” then returns to waiting | Amber | — |
+| CL-008 | 2026-09-09 | edit | C | Raise/lower sensitivity, off-only-at-max, Wave Complete, looping wave | Amber | — |

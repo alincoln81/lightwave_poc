@@ -8,6 +8,7 @@ let goActive = false;
 let raised = false;
 let fallback = false;
 let requireRaise = true;
+let offOnlyAtMax = false;
 let maxMs = 2000;
 let torchOnAt = null;
 let desiredOn = false;
@@ -16,7 +17,7 @@ let capTimer = null;
 /**
  * Pure gate used by tests and the live controller.
  * elapsedMs is time since torch turned on (0 if off).
- * @param {{ goActive: boolean, raised: boolean, fallback: boolean, elapsedMs: number, maxMs: number, requireRaise?: boolean }} input
+ * @param {{ goActive: boolean, raised: boolean, fallback: boolean, elapsedMs: number, maxMs: number, requireRaise?: boolean, offOnlyAtMax?: boolean, latched?: boolean }} input
  * @returns {boolean}
  */
 export function lw_shouldTorchBeOn({
@@ -26,13 +27,16 @@ export function lw_shouldTorchBeOn({
     elapsedMs,
     maxMs: cap,
     requireRaise: needRaise = true,
+    offOnlyAtMax: keepUntilMax = false,
+    latched = false,
 }) {
     if (!go) return false;
     const limit = Number.isFinite(cap) ? cap : 2000;
     if (Number.isFinite(elapsedMs) && elapsedMs >= limit) return false;
     if (needRaise === false) return true;
     if (useFallback) return true;
-    return !!isRaised;
+    if (isRaised) return true;
+    return !!(keepUntilMax && latched);
 }
 
 function elapsedSinceOn(now = Date.now()) {
@@ -55,6 +59,8 @@ async function applyDesired() {
         elapsedMs: elapsedSinceOn(),
         maxMs,
         requireRaise,
+        offOnlyAtMax,
+        latched: torchOnAt !== null,
     });
     if (shouldOn === desiredOn && !(shouldOn && torchOnAt === null)) {
         if (!shouldOn && torchOnAt !== null) {
@@ -84,10 +90,12 @@ export function lw_torchConfigure({
     maxMs: nextMax,
     fallback: nextFallback,
     requireRaise: nextRequireRaise,
+    offOnlyAtMax: nextOffOnlyAtMax,
 } = {}) {
     if (Number.isFinite(nextMax)) maxMs = nextMax;
     if (typeof nextFallback === 'boolean') fallback = nextFallback;
     if (typeof nextRequireRaise === 'boolean') requireRaise = nextRequireRaise;
+    if (typeof nextOffOnlyAtMax === 'boolean') offOnlyAtMax = nextOffOnlyAtMax;
 }
 
 export async function lw_torchSetGoActive(active) {
@@ -118,6 +126,7 @@ export function lw_torchReset() {
     raised = false;
     fallback = false;
     requireRaise = true;
+    offOnlyAtMax = false;
     maxMs = 2000;
     torchOnAt = null;
     desiredOn = false;

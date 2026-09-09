@@ -4,11 +4,9 @@
  * (phone inverted or torch pointed upward — typical stadium flashlight pose).
  */
 
-const ENTER_ANGLE_DEG = 70;
-const EXIT_ANGLE_DEG = 50;
-const ENTER_TORCH_UP = 0.35;
-const EXIT_TORCH_UP = 0.15;
 const MIN_G = 6;
+const DEFAULT_RAISE_SENSITIVITY = 8;
+const DEFAULT_LOWER_SENSITIVITY = 2;
 const HEARTBEAT_MS = 2000;
 const NO_SAMPLE_MS = 3000;
 
@@ -23,6 +21,46 @@ let onNoSample = null;
 let motionHandler = null;
 let heartbeatTimer = null;
 let noSampleTimer = null;
+let liveThresholds = null;
+
+function clampSensitivity(value, fallback) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return fallback;
+    return Math.min(10, Math.max(1, Math.round(n)));
+}
+
+function lerp(a, b, t) {
+    return a + (b - a) * t;
+}
+
+/**
+ * Map 1–10 producer sliders to enter/exit thresholds.
+ * Higher raise = easier / more subtle to turn on.
+ * Higher lower = easier to turn off; low = must drop almost upright.
+ * @param {number} raiseSensitivity
+ * @param {number} lowerSensitivity
+ */
+export function lw_thresholdsFromSensitivity(raiseSensitivity, lowerSensitivity) {
+    const raise = clampSensitivity(raiseSensitivity, DEFAULT_RAISE_SENSITIVITY);
+    const lower = clampSensitivity(lowerSensitivity, DEFAULT_LOWER_SENSITIVITY);
+    const tRaise = (raise - 1) / 9;
+    const tLower = (lower - 1) / 9;
+    return {
+        enterAngleDeg: lerp(82, 18, tRaise),
+        enterTorchUp: lerp(0.5, 0.06, tRaise),
+        exitAngleDeg: lerp(8, 48, tLower),
+        exitTorchUp: lerp(0.06, 0.28, tLower),
+    };
+}
+
+export function lw_poseConfigure({ raiseSensitivity, lowerSensitivity } = {}) {
+    liveThresholds = lw_thresholdsFromSensitivity(
+        raiseSensitivity ?? DEFAULT_RAISE_SENSITIVITY,
+        lowerSensitivity ?? DEFAULT_LOWER_SENSITIVITY,
+    );
+}
+
+liveThresholds = lw_thresholdsFromSensitivity(DEFAULT_RAISE_SENSITIVITY, DEFAULT_LOWER_SENSITIVITY);
 
 /**
  * @param {{ gx: number, gy: number, gz: number }} g
@@ -46,14 +84,18 @@ export function lw_poseMetrics({ gx, gy, gz }) {
  * @param {'raised'|'lowered'} previous
  * @returns {'raised'|'lowered'|'unknown'}
  */
-export function lw_classifyPose(g, previous = 'lowered') {
+export function lw_classifyPose(g, previous = 'lowered', thresholds = liveThresholds) {
     const { angleDeg, torchUp, ok } = lw_poseMetrics(g);
     if (!ok) return 'unknown';
+    const enterAngle = Number(thresholds?.enterAngleDeg);
+    const exitAngle = Number(thresholds?.exitAngleDeg);
+    const enterTorch = Number(thresholds?.enterTorchUp);
+    const exitTorch = Number(thresholds?.exitTorchUp);
     if (previous === 'raised') {
-        if (angleDeg < EXIT_ANGLE_DEG && torchUp < EXIT_TORCH_UP) return 'lowered';
+        if (angleDeg < exitAngle && torchUp < exitTorch) return 'lowered';
         return 'raised';
     }
-    if (angleDeg > ENTER_ANGLE_DEG || torchUp > ENTER_TORCH_UP) return 'raised';
+    if (angleDeg > enterAngle || torchUp > enterTorch) return 'raised';
     return 'lowered';
 }
 

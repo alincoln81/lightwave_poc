@@ -7,6 +7,7 @@ import {
     lw_stopCountdown,
     lw_showWaiting,
     lw_showLowerPhone,
+    lw_showWaveComplete,
     lw_setCountdownSeconds,
 } from './lw_countdown.js';
 import { lw_torchConfigure, lw_torchSetGoActive, lw_torchOff } from './lw_torch.js';
@@ -57,7 +58,7 @@ async function endGoWindow() {
     lw_showLowerPhone();
     lowerTimer = setTimeout(() => {
         lowerTimer = null;
-        if (mySection) lw_showWaiting(mySection);
+        lw_showWaveComplete();
     }, LW_LOWER_HOLD_MS);
 }
 
@@ -74,6 +75,7 @@ async function handleCue(cue) {
     lw_torchConfigure({
         maxMs: Number.isFinite(torchMax) ? torchMax : 2000,
         requireRaise: cue.lw_requireRaise !== false,
+        offOnlyAtMax: cue.lw_offOnlyAtMax === true,
     });
     if (Number.isFinite(countdownSec)) {
         lw_setCountdownSeconds(countdownSec);

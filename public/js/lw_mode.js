@@ -13,6 +13,7 @@ import {
     lw_requestMotionPermission,
     lw_poseStart,
     lw_poseStop,
+    lw_poseConfigure,
     lw_getSampleCount,
     lw_getPose,
 } from './lw_pose.js';
@@ -37,6 +38,10 @@ export const LW_DEFAULTS = {
     lw_waitingText: "You're in section {section}. Get ready.",
     lw_requireRaise: true,
     lw_debugOverlay: false,
+    lw_raiseSensitivity: 8,
+    lw_lowerSensitivity: 2,
+    lw_offOnlyAtMax: false,
+    lw_loop: false,
 };
 
 let active = false;
@@ -80,6 +85,18 @@ export function lw_applyLightwaveSettings(target, settings) {
         target.lw_debugOverlay = src.lw_debugOverlay;
     } else if (typeof target.lw_debugOverlay !== 'boolean') {
         target.lw_debugOverlay = LW_DEFAULTS.lw_debugOverlay;
+    }
+    target.lw_raiseSensitivity = clampInt(src.lw_raiseSensitivity, 1, 10, target.lw_raiseSensitivity ?? LW_DEFAULTS.lw_raiseSensitivity);
+    target.lw_lowerSensitivity = clampInt(src.lw_lowerSensitivity, 1, 10, target.lw_lowerSensitivity ?? LW_DEFAULTS.lw_lowerSensitivity);
+    if (typeof src.lw_offOnlyAtMax === 'boolean') {
+        target.lw_offOnlyAtMax = src.lw_offOnlyAtMax;
+    } else if (typeof target.lw_offOnlyAtMax !== 'boolean') {
+        target.lw_offOnlyAtMax = LW_DEFAULTS.lw_offOnlyAtMax;
+    }
+    if (typeof src.lw_loop === 'boolean') {
+        target.lw_loop = src.lw_loop;
+    } else if (typeof target.lw_loop !== 'boolean') {
+        target.lw_loop = LW_DEFAULTS.lw_loop;
     }
 }
 
@@ -178,6 +195,11 @@ function applyTimingFromSettings() {
         maxMs: settings.lw_torchMaxMs || LW_DEFAULTS.lw_torchMaxMs,
         fallback: lastPermission === 'denied' || lastPermission === 'unsupported',
         requireRaise: settings.lw_requireRaise !== false,
+        offOnlyAtMax: settings.lw_offOnlyAtMax === true,
+    });
+    lw_poseConfigure({
+        raiseSensitivity: settings.lw_raiseSensitivity,
+        lowerSensitivity: settings.lw_lowerSensitivity,
     });
     paintDebug();
 }
@@ -330,6 +352,10 @@ export async function lw_sync(nextCtx) {
     ctx = nextCtx;
     const shouldRun = !!(nextCtx.joined && !nextCtx.locked && lw_normalizeMode(nextCtx.settings?.mode) === 'lightwave');
     if (shouldRun) {
+        if (active) {
+            applyTimingFromSettings();
+            return;
+        }
         await lw_start(nextCtx);
         return;
     }
