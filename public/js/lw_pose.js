@@ -23,6 +23,7 @@ let sampleCount = 0;
 let lastMetrics = { angleDeg: 0, torchUp: 0, ok: false, raiseTravel: 0, lowerTravel: 0 };
 let onChange = null;
 let onFirstSample = null;
+let onSample = null;
 let onHeartbeat = null;
 let onNoSample = null;
 let motionHandler = null;
@@ -46,7 +47,8 @@ function lerp(a, b, t) {
  * Map 1–10 producer sliders to raise/lower gesture thresholds.
  * Higher raise = shorter upward travel to turn on.
  * Higher lower = shorter downward travel to turn off.
- * Defaults are 5 / 5. Raise travel stays shorter than lower travel at the same slider.
+ * Higher slider = easier (less travel / hold). At 5 / 5, raise needs more
+ * travel than lower so a small lift does not fire and a normal drop does.
  * @param {number} raiseSensitivity
  * @param {number} lowerSensitivity
  */
@@ -58,12 +60,12 @@ export function lw_thresholdsFromSensitivity(raiseSensitivity, lowerSensitivity)
     return {
         enterAngleDeg: lerp(82, 18, tRaise),
         enterTorchUp: lerp(0.5, 0.06, tRaise),
-        raiseAccel: lerp(2.4, 0.7, tRaise),
-        raiseTravel: lerp(0.55, 0.12, tRaise),
-        raiseHoldMs: lerp(140, 40, tRaise),
-        lowerAccel: lerp(2.8, 1.1, tLower),
-        lowerTravel: lerp(1.15, 0.28, tLower),
-        lowerHoldMs: lerp(280, 80, tLower),
+        raiseAccel: lerp(2.8, 1.0, tRaise),
+        raiseTravel: lerp(0.85, 0.22, tRaise),
+        raiseHoldMs: lerp(180, 60, tRaise),
+        lowerAccel: lerp(2.0, 0.7, tLower),
+        lowerTravel: lerp(0.70, 0.14, tLower),
+        lowerHoldMs: lerp(180, 50, tLower),
         orientConfirmMs: lerp(220, 70, tRaise),
     };
 }
@@ -76,6 +78,37 @@ export function lw_poseConfigure({ raiseSensitivity, lowerSensitivity } = {}) {
 }
 
 liveThresholds = lw_thresholdsFromSensitivity(DEFAULT_RAISE_SENSITIVITY, DEFAULT_LOWER_SENSITIVITY);
+
+function clampTravel(value) {
+    const n = Number(value);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+/**
+ * How much upward / downward travel has been accumulated vs the current sliders.
+ * @param {ReturnType<typeof lw_createPoseState>|null} state
+ * @param {object} [thresholds]
+ */
+export function lw_travelProgress(state, thresholds = liveThresholds) {
+    const raiseNeed = clampTravel(thresholds?.raiseTravel);
+    const lowerNeed = clampTravel(thresholds?.lowerTravel);
+    const raiseHave = clampTravel(state?.raiseTravel);
+    const lowerHave = clampTravel(state?.lowerTravel);
+    return {
+        calibrating: !state || !state.baselineReady,
+        pose: state?.pose || 'neutral',
+        raiseHave,
+        raiseNeed,
+        raiseLeft: Math.max(0, raiseNeed - raiseHave),
+        lowerHave,
+        lowerNeed,
+        lowerLeft: Math.max(0, lowerNeed - lowerHave),
+    };
+}
+
+export function lw_getTravelDebug() {
+    return lw_travelProgress(tracker, liveThresholds);
+}
 
 /**
  * @param {{ gx: number, gy: number, gz: number }} g
@@ -374,6 +407,7 @@ export async function lw_requestMotionPermission() {
 function bindReporter(options = {}) {
     onChange = typeof options.onPose === 'function' ? options.onPose : onChange;
     onFirstSample = typeof options.onFirstSample === 'function' ? options.onFirstSample : onFirstSample;
+    onSample = typeof options.onSample === 'function' ? options.onSample : onSample;
     onHeartbeat = typeof options.onHeartbeat === 'function' ? options.onHeartbeat : onHeartbeat;
     onNoSample = typeof options.onNoSample === 'function' ? options.onNoSample : onNoSample;
 }
@@ -449,6 +483,7 @@ export function lw_poseStart(options = {}) {
         if (sampleCount === 1 && onFirstSample) {
             onFirstSample({ metrics: lastMetrics, pose });
         }
+        if (onSample) onSample({ metrics: lastMetrics, pose: next, travel: lw_getTravelDebug() });
         if (next === pose) return;
         pose = next;
         if (onChange) onChange(pose);
@@ -472,6 +507,7 @@ export function lw_poseStop() {
     motionHandler = null;
     onChange = null;
     onFirstSample = null;
+    onSample = null;
     onHeartbeat = null;
     onNoSample = null;
     listening = false;

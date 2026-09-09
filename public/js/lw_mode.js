@@ -16,6 +16,7 @@ import {
     lw_poseConfigure,
     lw_getSampleCount,
     lw_getPose,
+    lw_getTravelDebug,
 } from './lw_pose.js';
 import {
     lw_torchConfigure,
@@ -54,6 +55,7 @@ let lastFollowPose = false;
 let lastPermission = null;
 let debugSamples = 0;
 let debugPose = 'waiting';
+let lastDebugPaintAt = 0;
 
 function clampInt(value, min, max, fallback) {
     const n = Number(value);
@@ -114,19 +116,43 @@ export function lw_followPoseEnabled(settings) {
     return settings?.lw_followPose === true;
 }
 
+function fmtTravel(value) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return '0.00';
+    return n.toFixed(2);
+}
+
+/**
+ * Two lines: upward travel vs raise need, downward travel vs lower need.
+ * @param {{ calibrating?: boolean, pose?: string, raiseHave?: number, raiseNeed?: number, raiseLeft?: number, lowerHave?: number, lowerNeed?: number, lowerLeft?: number }} travel
+ */
+export function lw_travelDebugLines(travel = {}) {
+    if (travel.calibrating) return 'Calibrating home hold…';
+    const pose = travel.pose || 'neutral';
+    const up = pose === 'raised'
+        ? `Up ${fmtTravel(travel.raiseHave)} / ${fmtTravel(travel.raiseNeed)} · already raised`
+        : `Up ${fmtTravel(travel.raiseHave)} / ${fmtTravel(travel.raiseNeed)} · need ${fmtTravel(travel.raiseLeft)} more`;
+    const down = pose === 'raised'
+        ? `Down ${fmtTravel(travel.lowerHave)} / ${fmtTravel(travel.lowerNeed)} · need ${fmtTravel(travel.lowerLeft)} more`
+        : `Down ${fmtTravel(travel.lowerHave)} / ${fmtTravel(travel.lowerNeed)} · wait until raised`;
+    return `${up}\n${down}`;
+}
+
 /**
  * Compact on-phone motion status. Hidden unless the producer enables debug.
- * @param {{ permission?: string, samples?: number, pose?: string }} input
+ * @param {{ permission?: string, samples?: number, pose?: string, travel?: object }} input
  * @returns {string}
  */
-export function lw_debugLine({ permission, samples, pose } = {}) {
+export function lw_debugLine({ permission, samples, pose, travel } = {}) {
     const perm = permission || 'unknown';
     const n = Number(samples);
     const count = Number.isFinite(n) ? n : 0;
     if (perm === 'denied') return 'Motion: denied · fallback';
     if (perm === 'unsupported') return 'Motion: unsupported · fallback';
     if (count <= 0) return `Motion: ${perm} · samples: 0 · pose: waiting`;
-    return `Motion: ${perm} · samples: ${count} · pose: ${pose || 'neutral'}`;
+    const head = `Motion: ${perm} · samples: ${count} · pose: ${pose || 'neutral'}`;
+    if (!travel) return head;
+    return `${head}\n${lw_travelDebugLines(travel)}`;
 }
 
 function round1(value) {
@@ -152,6 +178,7 @@ function paintDebug() {
         permission: lastPermission,
         samples: debugSamples,
         pose: debugPose,
+        travel: lw_getTravelDebug(),
     });
 }
 
@@ -186,6 +213,14 @@ function poseReporterOptions() {
                 angleDeg: round1(metrics && metrics.angleDeg),
                 torchUp: round1(metrics && metrics.torchUp),
             });
+        },
+        onSample: ({ pose }) => {
+            debugSamples = lw_getSampleCount();
+            if (pose && pose !== 'waiting') debugPose = pose;
+            const now = Date.now();
+            if (now - lastDebugPaintAt < 120) return;
+            lastDebugPaintAt = now;
+            paintDebug();
         },
         onHeartbeat: (info) => {
             debugSamples = Number(info && info.samples) || debugSamples;
@@ -386,6 +421,7 @@ async function lw_stopInternal() {
     lastFollowPose = false;
     debugSamples = 0;
     debugPose = 'waiting';
+    lastDebugPaintAt = 0;
     paintDebug();
     active = false;
 }
