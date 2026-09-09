@@ -535,6 +535,7 @@ Producer Stop / mode default → lw_wave-stop / lw_mode.stop → torch off
 | Torch off on lower | Optional `lw_offOnlyAtMax` ignores lowering until torch max | Owner request after C | Checkbox on Lightwave tab |
 | Single pass wave | Optional `lw_loop` restarts the occupied-section pass after a gap | Owner request after C | Stop Wave ends the loop |
 | Settings update always calls `lw_start` | If already running, only re-apply timing/sensitivity | Live slider changes must not reset overlay or torch | Pose thresholds update without interrupting a pass |
+| Raise 8 / lower 2 / torch 2000 / start lowered | Defaults raise 5, lower 5, torch max 3000; pose starts `neutral` until first samples set the home hold | Owner request after C | Raise/lower measured from the initial pose, not an assumed lowered start |
 
 ### C.5 Skipped or deferred work
 
@@ -787,3 +788,4 @@ Producer Stop / mode default → lw_wave-stop / lw_mode.stop → torch off
 | CL-007 | 2026-09-09 | edit | C | After the GO window, participant overlay shows “Lower your Phone” then returns to waiting | Amber | — |
 | CL-008 | 2026-09-09 | edit | C | Raise/lower sensitivity, off-only-at-max, Wave Complete, looping wave | Amber | — |
 | CL-009 | 2026-09-09 | edit | C | Motion-based raise/lower: short top-up lift vs long drop; sync pose at GO | Amber | — |
+| CL-010 | 2026-09-09 | edit | C | Defaults raise/lower 5, torch max 3000; initial pose is neutral until calibrated | Amber | — |

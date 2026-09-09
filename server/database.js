@@ -278,7 +278,7 @@ async function setSettings(data, firestoreRoot, type) {
       const lwTorch = Number(data.lw_torchMaxMs);
       settings.lw_torchMaxMs = Number.isFinite(lwTorch)
         ? Math.min(10000, Math.max(200, Math.round(lwTorch)))
-        : (settings.lw_torchMaxMs ?? 2000);
+        : (settings.lw_torchMaxMs ?? 3000);
       const lwCount = Number(data.lw_countdownSeconds);
       settings.lw_countdownSeconds = Number.isFinite(lwCount)
         ? Math.min(10, Math.max(1, Math.round(lwCount)))
@@ -295,11 +295,11 @@ async function setSettings(data, firestoreRoot, type) {
       const lwRaise = Number(data.lw_raiseSensitivity);
       settings.lw_raiseSensitivity = Number.isFinite(lwRaise)
         ? Math.min(10, Math.max(1, Math.round(lwRaise)))
-        : (settings.lw_raiseSensitivity ?? 8);
+        : (settings.lw_raiseSensitivity ?? 5);
       const lwLower = Number(data.lw_lowerSensitivity);
       settings.lw_lowerSensitivity = Number.isFinite(lwLower)
         ? Math.min(10, Math.max(1, Math.round(lwLower)))
-        : (settings.lw_lowerSensitivity ?? 2);
+        : (settings.lw_lowerSensitivity ?? 5);
       settings.lw_offOnlyAtMax = data.lw_offOnlyAtMax === true;
       settings.lw_loop = data.lw_loop === true;
       settings.paused = data.paused;

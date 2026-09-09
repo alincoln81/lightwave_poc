@@ -9,7 +9,7 @@ let raised = false;
 let fallback = false;
 let requireRaise = true;
 let offOnlyAtMax = false;
-let maxMs = 2000;
+let maxMs = 3000;
 let torchOnAt = null;
 let desiredOn = false;
 let capTimer = null;
@@ -31,7 +31,7 @@ export function lw_shouldTorchBeOn({
     latched = false,
 }) {
     if (!go) return false;
-    const limit = Number.isFinite(cap) ? cap : 2000;
+    const limit = Number.isFinite(cap) ? cap : 3000;
     if (Number.isFinite(elapsedMs) && elapsedMs >= limit) return false;
     if (needRaise === false) return true;
     if (useFallback) return true;
@@ -127,7 +127,7 @@ export function lw_torchReset() {
     fallback = false;
     requireRaise = true;
     offOnlyAtMax = false;
-    maxMs = 2000;
+    maxMs = 3000;
     torchOnAt = null;
     desiredOn = false;
     clearCapTimer();

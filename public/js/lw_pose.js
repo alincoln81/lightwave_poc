@@ -5,10 +5,12 @@
  */
 
 const MIN_G = 6;
-const DEFAULT_RAISE_SENSITIVITY = 8;
-const DEFAULT_LOWER_SENSITIVITY = 2;
+const DEFAULT_RAISE_SENSITIVITY = 5;
+const DEFAULT_LOWER_SENSITIVITY = 5;
 const HEARTBEAT_MS = 2000;
 const NO_SAMPLE_MS = 3000;
+const CALIBRATE_SAMPLES = 10;
+const CALIBRATE_MS = 200;
 const GRAVITY_TAU_SEC = 0.22;
 const TRAVEL_DECAY_TAU_SEC = 0.12;
 const MAX_DT_SEC = 0.05;
@@ -16,7 +18,7 @@ const MIN_DT_SEC = 0.008;
 const DEADZONE_MS2 = 0.45;
 
 let listening = false;
-let pose = 'lowered';
+let pose = 'neutral';
 let sampleCount = 0;
 let lastMetrics = { angleDeg: 0, torchUp: 0, ok: false, raiseTravel: 0, lowerTravel: 0 };
 let onChange = null;
@@ -44,7 +46,7 @@ function lerp(a, b, t) {
  * Map 1–10 producer sliders to raise/lower gesture thresholds.
  * Higher raise = shorter upward travel to turn on.
  * Higher lower = shorter downward travel to turn off.
- * Lower-default 2 always needs more travel than raise-default 8.
+ * Defaults are 5 / 5. Raise travel stays shorter than lower travel at the same slider.
  * @param {number} raiseSensitivity
  * @param {number} lowerSensitivity
  */
@@ -117,7 +119,7 @@ export function lw_orientationLooksRaised(g, thresholds = liveThresholds) {
  */
 export function lw_createPoseState() {
     return {
-        pose: 'lowered',
+        pose: 'neutral',
         gravX: 0,
         gravY: -9.8,
         gravZ: 0,
@@ -127,6 +129,15 @@ export function lw_createPoseState() {
         lowerHoldMs: 0,
         orientHoldMs: 0,
         gravReady: false,
+        baselineReady: false,
+        calibSamples: 0,
+        calibMs: 0,
+        sumGx: 0,
+        sumGy: 0,
+        sumGz: 0,
+        baseGx: 0,
+        baseGy: -9.8,
+        baseGz: 0,
     };
 }
 
@@ -190,17 +201,79 @@ function worldUpAccel(lin, state) {
     return upA + 0.35 * Math.max(0, topAlongUp);
 }
 
+function finishCalibration(state, thresholds) {
+    const n = state.calibSamples || 1;
+    state.baseGx = state.sumGx / n;
+    state.baseGy = state.sumGy / n;
+    state.baseGz = state.sumGz / n;
+    state.baselineReady = true;
+    const initial = {
+        gx: state.baseGx,
+        gy: state.baseGy,
+        gz: state.baseGz,
+    };
+    state.pose = lw_orientationLooksRaised(initial, thresholds) ? 'raised' : 'lowered';
+}
+
+/**
+ * Raised vs the captured home hold, or an already-overhead posture.
+ * @param {{ gx: number, gy: number, gz: number }} sample
+ * @param {ReturnType<typeof lw_createPoseState>} state
+ * @param {object} thresholds
+ */
+export function lw_looksRaisedFromInitial(sample, state, thresholds) {
+    const current = { gx: sample.gx, gy: sample.gy, gz: sample.gz };
+    if (lw_orientationLooksRaised(current, thresholds)) return true;
+    const now = lw_poseMetrics(current);
+    const home = lw_poseMetrics({
+        gx: state.baseGx,
+        gy: state.baseGy,
+        gz: state.baseGz,
+    });
+    if (!now.ok || !home.ok) return false;
+    const needAngle = Number(thresholds.enterAngleDeg) * 0.4 + 6;
+    const needTorch = Number(thresholds.enterTorchUp) * 0.5 + 0.05;
+    return (now.angleDeg - home.angleDeg) >= needAngle
+        || (now.torchUp - home.torchUp) >= needTorch;
+}
+
+function collectBaseline(state, sample, dtSec) {
+    const gx = Number(sample.gx);
+    const gy = Number(sample.gy);
+    const gz = Number(sample.gz);
+    if (!Number.isFinite(gx) || !Number.isFinite(gy) || !Number.isFinite(gz)) {
+        return false;
+    }
+    const mag = Math.hypot(gx, gy, gz);
+    if (mag < MIN_G) return false;
+    state.sumGx += gx;
+    state.sumGy += gy;
+    state.sumGz += gz;
+    state.calibSamples += 1;
+    state.calibMs += dtSec * 1000;
+    return state.calibSamples >= CALIBRATE_SAMPLES && state.calibMs >= CALIBRATE_MS;
+}
+
 /**
  * Advance the pose tracker by one motion sample.
- * Raised only after a short upward camera-end lift (or a held raised posture).
- * Lowered only after a longer downward drop — not from tilt noise.
+ * Starts neutral while the first samples capture the home hold, then
+ * classifies raised/lowered from that initial position. Raise is a short
+ * camera-end lift from home; lower is a longer downward drop only.
  * @param {ReturnType<typeof lw_createPoseState>} state
  * @param {{ gx: number, gy: number, gz: number, ax?: number, ay?: number, az?: number, dtSec?: number }} sample
  * @param {object} [thresholds]
- * @returns {'raised'|'lowered'}
+ * @returns {'raised'|'lowered'|'neutral'}
  */
 export function lw_advancePose(state, sample, thresholds = liveThresholds) {
     const dtSec = Math.min(MAX_DT_SEC, Math.max(MIN_DT_SEC, Number(sample?.dtSec) || 1 / 60));
+    if (!state.baselineReady) {
+        state.pose = 'neutral';
+        updateGravity(state, sample, dtSec);
+        if (collectBaseline(state, sample, dtSec)) {
+            finishCalibration(state, thresholds);
+        }
+        return state.pose;
+    }
     updateGravity(state, sample, dtSec);
     const lin = linearFromSample(sample, state);
     const upA = worldUpAccel(lin, state);
@@ -218,11 +291,7 @@ export function lw_advancePose(state, sample, thresholds = liveThresholds) {
             state.raiseTravel = decayTravel(state.raiseTravel, dtSec);
             state.raiseHoldMs = 0;
         }
-        const looksUp = lw_orientationLooksRaised({
-            gx: sample.gx,
-            gy: sample.gy,
-            gz: sample.gz,
-        }, thresholds);
+        const looksUp = lw_looksRaisedFromInitial(sample, state, thresholds);
         if (looksUp) {
             state.orientHoldMs += dtSec * 1000;
         } else {
@@ -333,7 +402,7 @@ function clearReporterTimers() {
 
 function resetLiveTracker() {
     tracker = lw_createPoseState();
-    pose = 'lowered';
+    pose = 'neutral';
     sampleCount = 0;
     lastSampleAt = 0;
     lastMetrics = { angleDeg: 0, torchUp: 0, ok: false, raiseTravel: 0, lowerTravel: 0 };

@@ -1826,13 +1826,13 @@ function syncLwProducerUi() {
     const stopBtnLw = document.getElementById('lw_wave-stop');
     if (toggle) toggle.checked = lwIsEnabled();
     if (debugOverlay) debugOverlay.checked = session.settings.lw_debugOverlay === true;
-    if (raiseSens) raiseSens.value = String(session.settings.lw_raiseSensitivity ?? 8);
-    if (lowerSens) lowerSens.value = String(session.settings.lw_lowerSensitivity ?? 2);
+    if (raiseSens) raiseSens.value = String(session.settings.lw_raiseSensitivity ?? 5);
+    if (lowerSens) lowerSens.value = String(session.settings.lw_lowerSensitivity ?? 5);
     if (offOnlyMax) offOnlyMax.checked = session.settings.lw_offOnlyAtMax === true;
     if (loopWave) loopWave.checked = session.settings.lw_loop === true;
     if (countdown) countdown.value = String(session.settings.lw_countdownSeconds ?? 3);
     if (delay) delay.value = String(session.settings.lw_sectionDelayMs ?? 400);
-    if (torchMax) torchMax.value = String(session.settings.lw_torchMaxMs ?? 2000);
+    if (torchMax) torchMax.value = String(session.settings.lw_torchMaxMs ?? 3000);
     if (waiting) waiting.value = session.settings.lw_waitingText || LW_DEFAULTS.lw_waitingText;
     const requireRaise = session.settings.lw_requireRaise !== false;
     if (triggerRaise) triggerRaise.checked = requireRaise;

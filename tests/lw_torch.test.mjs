@@ -98,6 +98,14 @@ function drivePose(state, thresholds, sample, count) {
     return pose;
 }
 
+function primedState(pose = 'lowered') {
+    const state = lw_createPoseState();
+    state.baselineReady = true;
+    state.gravReady = true;
+    state.pose = pose;
+    return state;
+}
+
 function uprightSample(extra = {}) {
     return {
         gx: 0,
@@ -112,9 +120,16 @@ function uprightSample(extra = {}) {
 }
 
 describe('lw_advancePose', () => {
-    it('treats a still upright phone as lowered', () => {
+    it('stays neutral until the initial hold is sampled', () => {
         const state = lw_createPoseState();
-        const thresholds = lw_thresholdsFromSensitivity(8, 2);
+        const thresholds = lw_thresholdsFromSensitivity(5, 5);
+        assert.equal(state.pose, 'neutral');
+        assert.equal(drivePose(state, thresholds, uprightSample(), 5), 'neutral');
+    });
+
+    it('treats a still upright phone as lowered after calibration', () => {
+        const state = lw_createPoseState();
+        const thresholds = lw_thresholdsFromSensitivity(5, 5);
         assert.equal(drivePose(state, thresholds, uprightSample(), 12), 'lowered');
     });
 
@@ -130,16 +145,15 @@ describe('lw_advancePose', () => {
         const easy = lw_thresholdsFromSensitivity(10, 2);
         const hard = lw_thresholdsFromSensitivity(1, 2);
         const lift = uprightSample({ ay: 3.2 });
-        const easyState = lw_createPoseState();
-        const hardState = lw_createPoseState();
+        const easyState = primedState('lowered');
+        const hardState = primedState('lowered');
         assert.equal(drivePose(easyState, easy, lift, 4), 'raised');
         assert.equal(drivePose(hardState, hard, lift, 4), 'lowered');
     });
 
     it('does not lower from orientation wobble once raised', () => {
         const thresholds = lw_thresholdsFromSensitivity(8, 2);
-        const state = lw_createPoseState();
-        state.pose = 'raised';
+        const state = primedState('raised');
         const wobble = 22 * (Math.PI / 180);
         const noisy = uprightSample({
             gy: -9.8 * Math.cos(wobble),
@@ -152,12 +166,9 @@ describe('lw_advancePose', () => {
     it('needs a sustained downward drop to lower when lower sensitivity is low', () => {
         const extreme = lw_thresholdsFromSensitivity(8, 1);
         const easyLower = lw_thresholdsFromSensitivity(8, 10);
-        const blipState = lw_createPoseState();
-        blipState.pose = 'raised';
-        const dropState = lw_createPoseState();
-        dropState.pose = 'raised';
-        const easyState = lw_createPoseState();
-        easyState.pose = 'raised';
+        const blipState = primedState('raised');
+        const dropState = primedState('raised');
+        const easyState = primedState('raised');
         assert.equal(drivePose(blipState, extreme, uprightSample({ ay: -2.2 }), 6), 'raised');
         assert.equal(drivePose(dropState, extreme, uprightSample({ ay: -4.2 }), 20), 'lowered');
         assert.equal(drivePose(easyState, easyLower, uprightSample({ ay: -4.2 }), 8), 'lowered');

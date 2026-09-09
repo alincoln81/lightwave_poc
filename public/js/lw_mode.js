@@ -32,14 +32,14 @@ import {
 import { lw_waveStart, lw_waveSetSection, lw_waveReset } from './lw_wave.js';
 
 export const LW_DEFAULTS = {
-    lw_torchMaxMs: 2000,
+    lw_torchMaxMs: 3000,
     lw_countdownSeconds: 3,
     lw_sectionDelayMs: 400,
     lw_waitingText: "You're in section {section}. Get ready.",
     lw_requireRaise: true,
     lw_debugOverlay: false,
-    lw_raiseSensitivity: 8,
-    lw_lowerSensitivity: 2,
+    lw_raiseSensitivity: 5,
+    lw_lowerSensitivity: 5,
     lw_offOnlyAtMax: false,
     lw_loop: false,
 };
@@ -112,7 +112,7 @@ export function lw_debugLine({ permission, samples, pose } = {}) {
     if (perm === 'denied') return 'Motion: denied · fallback';
     if (perm === 'unsupported') return 'Motion: unsupported · fallback';
     if (count <= 0) return `Motion: ${perm} · samples: 0 · pose: waiting`;
-    return `Motion: ${perm} · samples: ${count} · pose: ${pose || 'lowered'}`;
+    return `Motion: ${perm} · samples: ${count} · pose: ${pose || 'neutral'}`;
 }
 
 function round1(value) {
@@ -166,7 +166,7 @@ function poseReporterOptions() {
         },
         onFirstSample: ({ metrics }) => {
             debugSamples = Math.max(debugSamples, 1);
-            if (debugPose === 'waiting') debugPose = lw_getPose() || 'lowered';
+            if (debugPose === 'waiting') debugPose = lw_getPose() || 'neutral';
             paintDebug();
             emitPoseLog('first-sample', {
                 angleDeg: round1(metrics && metrics.angleDeg),
@@ -316,7 +316,7 @@ async function lw_start(nextCtx) {
 
     debugSamples = lw_getSampleCount();
     if (debugSamples > 0) {
-        debugPose = lw_getPose() || 'lowered';
+        debugPose = lw_getPose() || 'neutral';
     } else if (!debugPose) {
         debugPose = 'waiting';
     }
