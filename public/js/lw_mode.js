@@ -23,12 +23,8 @@ import {
 import {
     lw_setWaitingText,
     lw_setCountdownSeconds,
-    lw_showOverlay,
-    lw_showSectionForm,
-    lw_showMotionButton,
     lw_showWaiting,
     lw_hideAll,
-    lw_setOverlayText,
 } from './lw_countdown.js';
 import { lw_waveStart, lw_waveSetSection, lw_waveReset } from './lw_wave.js';
 
@@ -37,12 +33,11 @@ export const LW_DEFAULTS = {
     lw_countdownSeconds: 3,
     lw_sectionDelayMs: 400,
     lw_waitingText: "You're in section {section}. Get ready.",
+    lw_requireRaise: true,
 };
 
 let active = false;
 let ctx = null;
-let sectionBound = false;
-let motionBound = false;
 let lastPermission = null;
 
 function clampInt(value, min, max, fallback) {
@@ -71,6 +66,11 @@ export function lw_applyLightwaveSettings(target, settings) {
     } else if (!target.lw_waitingText) {
         target.lw_waitingText = LW_DEFAULTS.lw_waitingText;
     }
+    if (typeof src.lw_requireRaise === 'boolean') {
+        target.lw_requireRaise = src.lw_requireRaise;
+    } else if (typeof target.lw_requireRaise !== 'boolean') {
+        target.lw_requireRaise = LW_DEFAULTS.lw_requireRaise;
+    }
 }
 
 function applyTimingFromSettings() {
@@ -80,6 +80,7 @@ function applyTimingFromSettings() {
     lw_torchConfigure({
         maxMs: settings.lw_torchMaxMs || LW_DEFAULTS.lw_torchMaxMs,
         fallback: lastPermission === 'denied' || lastPermission === 'unsupported',
+        requireRaise: settings.lw_requireRaise !== false,
     });
 }
 
@@ -95,58 +96,67 @@ async function onPose(pose) {
     await lw_torchSetRaised(pose === 'raised');
 }
 
-function bindSectionForm() {
-    if (sectionBound) return;
-    const form = document.getElementById('lw_section-form');
-    if (!form) return;
-    form.addEventListener('submit', (event) => {
-        event.preventDefault();
-        const input = document.getElementById('lw_section-input');
-        const errorEl = document.getElementById('lw_section-error');
-        const normalized = lw_normalizeSection(input ? input.value : '');
-        if (!normalized) {
-            if (errorEl) {
-                errorEl.hidden = false;
-            }
-            return;
-        }
-        if (errorEl) errorEl.hidden = true;
-        assignSection(normalized);
-    });
-    sectionBound = true;
+function joinSectionRow() {
+    return document.getElementById('lw_join-section');
 }
 
-function bindMotionButton() {
-    if (motionBound) return;
-    const btn = document.getElementById('lw_enable-motion');
-    if (!btn) return;
-    btn.addEventListener('click', async () => {
-        const result = await lw_requestMotionPermission();
-        lastPermission = result;
-        clientLog({ type: 'lw_motion-permission', result });
-        applyTimingFromSettings();
-        if (result === 'granted') {
-            lw_showMotionButton(false);
-            lw_poseStart({ onPose });
-            lw_torchConfigure({ fallback: false });
-        } else {
-            lw_showMotionButton(false);
-            lw_torchConfigure({ fallback: true });
-        }
-    });
-    motionBound = true;
+function joinSectionInput() {
+    return document.getElementById('lw_section-input');
 }
 
-function assignSection(section) {
-    if (!ctx) return;
-    const remembered = lw_rememberSection(ctx.token, section);
-    lw_emitSection(ctx.socket, ctx.token, remembered);
+function joinSectionError() {
+    return document.getElementById('lw_section-error');
+}
+
+export function lw_showJoinSection(show) {
+    const row = joinSectionRow();
+    if (!row) return;
+    row.style.display = show ? 'flex' : 'none';
+}
+
+export function lw_prefillJoinSection(token) {
+    const input = joinSectionInput();
+    if (!input) return;
+    const existing = lw_resolveSection(token);
+    if (existing) input.value = existing;
+    const errorEl = joinSectionError();
+    if (errorEl) errorEl.hidden = true;
+}
+
+/**
+ * Validate the join-page section field. Returns the normalized section or null.
+ * @param {string} token
+ * @returns {string|null}
+ */
+export function lw_captureJoinSection(token) {
+    const input = joinSectionInput();
+    const errorEl = joinSectionError();
+    const normalized = lw_normalizeSection(input ? input.value : '');
+    if (!normalized) {
+        if (errorEl) errorEl.hidden = false;
+        if (input) input.focus();
+        return null;
+    }
+    if (errorEl) errorEl.hidden = true;
+    if (input) input.value = normalized;
+    lw_rememberSection(token, normalized);
+    return normalized;
+}
+
+export function lw_commitJoinSection(socket, token, section) {
+    const remembered = lw_rememberSection(token, section);
+    if (!remembered) return null;
+    lw_emitSection(socket, token, remembered);
     lw_waveSetSection(remembered);
-    lw_showSectionForm(false);
-    lw_showWaiting(remembered);
+    return remembered;
 }
 
-async function startPoseFromJoin() {
+/**
+ * Request motion from the Join tap (same user gesture). Never shows a second button.
+ * Denied / missing sensors use the GO fallback flash.
+ * @returns {Promise<'granted'|'denied'|'unsupported'>}
+ */
+export async function lw_prepareMotionFromJoin() {
     if (lw_needsMotionPermission()) {
         const result = await lw_requestMotionPermission();
         lastPermission = result;
@@ -154,46 +164,49 @@ async function startPoseFromJoin() {
         if (result === 'granted') {
             lw_poseStart({ onPose });
             lw_torchConfigure({ fallback: false });
-            lw_showMotionButton(false);
-            return;
-        }
-        if (result === 'denied') {
+        } else {
             lw_torchConfigure({ fallback: true });
-            lw_showMotionButton(true);
-            return;
         }
+        return result;
     }
     lastPermission = typeof DeviceMotionEvent === 'undefined' ? 'unsupported' : 'granted';
+    clientLog({ type: 'lw_motion-permission', result: lastPermission });
     if (lastPermission === 'unsupported') {
         lw_torchConfigure({ fallback: true });
-        clientLog({ type: 'lw_motion-permission', result: 'unsupported' });
-        return;
+        return lastPermission;
     }
     lw_poseStart({ onPose });
     lw_torchConfigure({ fallback: false });
+    return lastPermission;
+}
+
+function assignSection(section) {
+    if (!ctx) return;
+    const remembered = lw_commitJoinSection(ctx.socket, ctx.token, section);
+    if (remembered) lw_showWaiting(remembered);
 }
 
 async function lw_start(nextCtx) {
     ctx = nextCtx;
     applyTimingFromSettings();
-    bindSectionForm();
-    bindMotionButton();
-    lw_showOverlay(true);
     lw_waveStart(ctx.socket);
 
-    if (!active) {
-        await startPoseFromJoin();
-    }
-
-    const existing = lw_resolveSection(ctx.token);
+    const existing = nextCtx.section || lw_resolveSection(ctx.token);
     if (existing) {
         assignSection(existing);
     } else {
         lw_waveSetSection(null);
-        lw_setOverlayText('Enter your section number');
-        lw_showSectionForm(true);
+        lw_showWaiting('');
     }
 
+    if (lastPermission === 'granted') {
+        lw_poseStart({ onPose });
+        lw_torchConfigure({ fallback: false });
+    } else if (lastPermission === 'denied' || lastPermission === 'unsupported') {
+        lw_torchConfigure({ fallback: true });
+    }
+
+    await lw_torchOff();
     active = true;
 }
 

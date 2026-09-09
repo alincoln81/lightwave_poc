@@ -32,13 +32,6 @@
 
     <div id="lw_overlay" style="display: none;" aria-hidden="true">
         <p id="lw_overlay-text"></p>
-        <form id="lw_section-form" style="display: none;" autocomplete="off">
-            <label for="lw_section-input">Section number</label>
-            <input id="lw_section-input" class="uk-input" type="text" inputmode="text" maxlength="8" aria-describedby="lw_section-error">
-            <p id="lw_section-error" hidden>Enter a section like 142 or 142A.</p>
-            <button type="submit" id="lw_section-submit" class="uk-button uk-button-primary">Confirm section</button>
-        </form>
-        <button type="button" id="lw_enable-motion" class="uk-button uk-button-default">Enable motion</button>
     </div>
 
     <!-- Fixed header (shown when displayAssets runs) -->
@@ -67,6 +60,11 @@
                         <input type="checkbox" id="join-consent-checkbox" class="uk-checkbox" />
                         <span>I Understand</span>
                     </label>
+                </div>
+                <div id="lw_join-section" class="uk-text-center uk-margin-small-bottom" style="display: none;">
+                    <label for="lw_section-input">Section number</label>
+                    <input id="lw_section-input" class="uk-input" type="text" inputmode="text" maxlength="8" autocomplete="off" aria-describedby="lw_section-error" placeholder="142">
+                    <p id="lw_section-error" hidden>Enter a section like 142 or 142A.</p>
                 </div>
                 <button id="join-button" class="uk-flex uk-flex-center uk-flex-middle uk-button uk-button-primary" style="display: none;"><span class="mdi mdi-flash"></span>Join Light Show</button>
                 <button id="leave-button" class="uk-flex uk-flex-center uk-flex-middle uk-button uk-button-default" style="display: none;"><span class="mdi mdi-exit-to-app"></span>Leave Light Show</button>

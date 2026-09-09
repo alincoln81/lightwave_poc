@@ -504,7 +504,7 @@ Producer Stop / mode default → lw_wave-stop / lw_mode.stop → torch off
 
 ### C.2 Outcome summary
 
-- Producer Show Controls has a Lightwave card: mode toggle, timing, Start/Stop Wave, occupied-section list. `mode: 'lightwave'` persists with `lw_*` settings.
+- Producer **Lightwave** tab (between Show Controls and Program Builder): mode toggle, torch trigger (raise vs after-countdown), timing, Start/Stop Wave, occupied-section counts, and the active section. `mode: 'lightwave'` persists with `lw_*` settings.
 - Participants reuse the existing join/torch path. In Lightwave they enter or prefill a section, see 3-2-1-GO, and the torch is pose-gated (or fallback-flashed) for at most 2 s.
 - Server `lw_wave.js` schedules occupied sections low → high and ignores `play-program` while the token is in Lightwave mode.
 - `lw_*` client modules are isolated; `timeline.js` / `torch-worker.js` were not rewritten.
@@ -514,7 +514,7 @@ Producer Stop / mode default → lw_wave-stop / lw_mode.stop → torch off
 
 | Command | Result | Notes |
 |---|---|---|
-| `npm test` | Pass | 16 tests, 0 fail (`node --test tests/lw_*.test.mjs`) |
+| `npm test` | Pass | 24 tests, 0 fail (`node --test tests/lw_*.test.mjs tests/testMode.test.mjs`) |
 | `npm run build` | Pass | Sass + esbuild + hashed dist. Pre-existing producer.js duplicate-key warnings (`recordingEnabled`, `maxRecordingDuration`) |
 | `npm run lint` | Skipped | Repo has no lint script |
 
@@ -526,6 +526,10 @@ Producer Stop / mode default → lw_wave-stop / lw_mode.stop → torch off
 | Client `lw_*` imported by `node:test` | Added `public/js/package.json` `{ "type": "module" }` | Root package is CommonJS; Node otherwise treats `public/js/*.js` as CJS | Tests can named-import client helpers; browser/esbuild unchanged |
 | `setTorch` static import in `lw_torch.js` | Dynamic import inside apply/off | Static import pulled `camera-torch-access.js` into unit tests | Gate function stays testable in Node |
 | `lw_geo.js` omitted | Omitted | B / D-004 | None |
+| Pose-gated torch only | Producer `lw_requireRaise` (default true). False = torch on at GO for every phone in the section | Owner request after C | Cue and settings carry `lw_requireRaise` |
+| Lightwave card on Show Controls | Own producer tab between Show Controls and Program Builder | Owner request after C | Tab ids after Lightwave shifted by one |
+| Join leaves torch on (`startTorchFlow`) | After Lightwave join, `setTorch(false)` and hide `#info-text` | Owner request after C | Torch stays off until GO + raise (or countdown-only mode) |
+| After GO, overlay returns to waiting | Overlay shows **Lower your Phone** for 2.5s when the torch window ends | Owner request after C | Then waiting copy until the next wave |
 
 ### C.5 Skipped or deferred work
 
@@ -549,7 +553,7 @@ Producer Stop / mode default → lw_wave-stop / lw_mode.stop → torch off
 
 ### Reviewer hints
 
-- Producer: Show Controls → Lightwave card. Enable mode, Start Wave. Program buttons are dimmed/disabled while Lightwave is on.
+- Producer: Lightwave tab. Enable mode, choose torch trigger, Start Wave. Occupancy lists counts; **Active section** updates at each GO. Program buttons on Show Controls are dimmed/disabled while Lightwave is on.
 - Participant: `/go/i/{token}` or `/go/i/{token}?lw_section=142`. Join first; overlay asks for section if the query/sessionStorage is empty.
 - First section still gets a full countdown because `goAt` includes `countdownMs` lead (C.4).
 - Desktop / denied motion uses the 2 s fallback flash at GO.
@@ -774,3 +778,5 @@ Producer Stop / mode default → lw_wave-stop / lw_mode.stop → torch off
 | CL-003 | 2026-09-09 | edit | B | Implementation plan from `/plan`: `lw_*` modules, socket/settings contracts, node:test + manual coverage, Playwright waived | Amber | — |
 | CL-004 | 2026-09-09 | approval | B | Section B plan approved; proceed to `/build` | Amber | Amber |
 | CL-005 | 2026-09-09 | edit | C | Build complete: Lightwave mode, wave schedule, pose-gated torch, unit tests + production build | Amber | — |
+| CL-006 | 2026-09-09 | edit | C | Torch off until raise; hide joined copy; producer torch-trigger + occupancy/active section; Lightwave as its own tab | Amber | — |
+| CL-007 | 2026-09-09 | edit | C | After the GO window, participant overlay shows “Lower your Phone” then returns to waiting | Amber | — |

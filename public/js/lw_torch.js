@@ -1,11 +1,13 @@
 /**
- * Lightwave torch gate: ON only during the GO window and while raised
- * (or sensor fallback), and never longer than lw_torchMaxMs after torch-on.
+ * Lightwave torch gate: ON only during the GO window, never longer than
+ * lw_torchMaxMs after torch-on. When requireRaise is true, also needs a
+ * raised pose (or sensor fallback). When false, GO turns the torch on.
  */
 
 let goActive = false;
 let raised = false;
 let fallback = false;
+let requireRaise = true;
 let maxMs = 2000;
 let torchOnAt = null;
 let desiredOn = false;
@@ -14,13 +16,21 @@ let capTimer = null;
 /**
  * Pure gate used by tests and the live controller.
  * elapsedMs is time since torch turned on (0 if off).
- * @param {{ goActive: boolean, raised: boolean, fallback: boolean, elapsedMs: number, maxMs: number }} input
+ * @param {{ goActive: boolean, raised: boolean, fallback: boolean, elapsedMs: number, maxMs: number, requireRaise?: boolean }} input
  * @returns {boolean}
  */
-export function lw_shouldTorchBeOn({ goActive: go, raised: isRaised, fallback: useFallback, elapsedMs, maxMs: cap }) {
+export function lw_shouldTorchBeOn({
+    goActive: go,
+    raised: isRaised,
+    fallback: useFallback,
+    elapsedMs,
+    maxMs: cap,
+    requireRaise: needRaise = true,
+}) {
     if (!go) return false;
     const limit = Number.isFinite(cap) ? cap : 2000;
     if (Number.isFinite(elapsedMs) && elapsedMs >= limit) return false;
+    if (needRaise === false) return true;
     if (useFallback) return true;
     return !!isRaised;
 }
@@ -44,6 +54,7 @@ async function applyDesired() {
         fallback,
         elapsedMs: elapsedSinceOn(),
         maxMs,
+        requireRaise,
     });
     if (shouldOn === desiredOn && !(shouldOn && torchOnAt === null)) {
         if (!shouldOn && torchOnAt !== null) {
@@ -69,9 +80,14 @@ async function applyDesired() {
     }
 }
 
-export function lw_torchConfigure({ maxMs: nextMax, fallback: nextFallback } = {}) {
+export function lw_torchConfigure({
+    maxMs: nextMax,
+    fallback: nextFallback,
+    requireRaise: nextRequireRaise,
+} = {}) {
     if (Number.isFinite(nextMax)) maxMs = nextMax;
     if (typeof nextFallback === 'boolean') fallback = nextFallback;
+    if (typeof nextRequireRaise === 'boolean') requireRaise = nextRequireRaise;
 }
 
 export async function lw_torchSetGoActive(active) {
@@ -101,6 +117,7 @@ export function lw_torchReset() {
     goActive = false;
     raised = false;
     fallback = false;
+    requireRaise = true;
     maxMs = 2000;
     torchOnAt = null;
     desiredOn = false;

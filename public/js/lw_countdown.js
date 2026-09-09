@@ -80,6 +80,17 @@ export function lw_countdownLabel(remainingSec) {
     return 'GO';
 }
 
+export function lw_lowerPhoneCopy() {
+    return 'Lower your Phone';
+}
+
+export function lw_showLowerPhone() {
+    lw_stopCountdown(false);
+    lw_showSectionForm(false);
+    lw_setOverlayText(lw_lowerPhoneCopy());
+    lw_showOverlay(true);
+}
+
 function paintFromNow(now) {
     if (localGoAt === null) return;
     const remainingMs = localGoAt - now;

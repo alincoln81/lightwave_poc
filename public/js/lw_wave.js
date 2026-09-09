@@ -2,7 +2,13 @@
  * Lightwave client: receive cues, compensate send delay, drive countdown + torch window.
  */
 
-import { lw_startCountdown, lw_stopCountdown, lw_showWaiting, lw_setCountdownSeconds } from './lw_countdown.js';
+import {
+    lw_startCountdown,
+    lw_stopCountdown,
+    lw_showWaiting,
+    lw_showLowerPhone,
+    lw_setCountdownSeconds,
+} from './lw_countdown.js';
 import { lw_torchConfigure, lw_torchSetGoActive, lw_torchOff } from './lw_torch.js';
 
 let socketRef = null;
@@ -10,8 +16,11 @@ let mySection = null;
 let activeWaveId = null;
 let goTimer = null;
 let endTimer = null;
+let lowerTimer = null;
 let cueHandler = null;
 let stopHandler = null;
+
+const LW_LOWER_HOLD_MS = 2500;
 
 /**
  * Map server goAt onto local clock using sentAt vs receive time.
@@ -36,12 +45,20 @@ function clearWaveTimers() {
         clearTimeout(endTimer);
         endTimer = null;
     }
+    if (lowerTimer !== null) {
+        clearTimeout(lowerTimer);
+        lowerTimer = null;
+    }
 }
 
 async function endGoWindow() {
     endTimer = null;
     await lw_torchSetGoActive(false);
-    if (mySection) lw_showWaiting(mySection);
+    lw_showLowerPhone();
+    lowerTimer = setTimeout(() => {
+        lowerTimer = null;
+        if (mySection) lw_showWaiting(mySection);
+    }, LW_LOWER_HOLD_MS);
 }
 
 async function handleCue(cue) {
@@ -56,6 +73,7 @@ async function handleCue(cue) {
     const countdownSec = Number(cue.lw_countdownSeconds);
     lw_torchConfigure({
         maxMs: Number.isFinite(torchMax) ? torchMax : 2000,
+        requireRaise: cue.lw_requireRaise !== false,
     });
     if (Number.isFinite(countdownSec)) {
         lw_setCountdownSeconds(countdownSec);

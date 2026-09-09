@@ -97,6 +97,7 @@ const session = {
         lw_countdownSeconds: LW_DEFAULTS.lw_countdownSeconds,
         lw_sectionDelayMs: LW_DEFAULTS.lw_sectionDelayMs,
         lw_waitingText: LW_DEFAULTS.lw_waitingText,
+        lw_requireRaise: LW_DEFAULTS.lw_requireRaise,
         paused: true,
         playing: false,
         redirectUrl: null,
@@ -1765,24 +1766,36 @@ function setLwProgramDisabled(disabled) {
     if (custom) custom.classList.toggle('lw_programs-disabled', disabled);
 }
 
-function renderLwOccupancy(occupied) {
+function renderLwOccupancy(payload) {
     const list = document.getElementById('lw_occupancy');
+    const activeEl = document.getElementById('lw_active-section');
+    const occupied = payload && Array.isArray(payload.occupied) ? payload.occupied : (Array.isArray(payload) ? payload : []);
+    const activeSection = payload && typeof payload.activeSection === 'string' ? payload.activeSection : null;
+    if (activeEl) {
+        activeEl.textContent = activeSection
+            ? `Active section: ${activeSection}`
+            : 'No wave in progress';
+        activeEl.classList.toggle('lw_active-section-live', !!activeSection);
+    }
     if (!list) return;
     list.innerHTML = '';
-    const rows = Array.isArray(occupied) ? occupied : [];
-    if (rows.length === 0) {
+    if (occupied.length === 0) {
         const empty = document.createElement('li');
         empty.className = 'uk-text-muted';
         empty.textContent = 'No joined sections yet';
         list.appendChild(empty);
         return;
     }
-    for (const row of rows) {
+    for (const row of occupied) {
         const item = document.createElement('li');
+        if (activeSection && row.section === activeSection) {
+            item.className = 'lw_occupancy-active';
+        }
         const section = document.createElement('span');
         section.textContent = `Section ${row.section}`;
         const count = document.createElement('span');
-        count.textContent = String(row.count);
+        const people = Number(row.count) === 1 ? '1 participant' : `${row.count} participants`;
+        count.textContent = people;
         item.appendChild(section);
         item.appendChild(count);
         list.appendChild(item);
@@ -1795,6 +1808,8 @@ function syncLwProducerUi() {
     const delay = document.getElementById('lw_section-delay');
     const torchMax = document.getElementById('lw_torch-max');
     const waiting = document.getElementById('lw_waiting-text');
+    const triggerRaise = document.getElementById('lw_trigger-raise');
+    const triggerCountdown = document.getElementById('lw_trigger-countdown');
     const startBtn = document.getElementById('lw_wave-start');
     const stopBtnLw = document.getElementById('lw_wave-stop');
     if (toggle) toggle.checked = lwIsEnabled();
@@ -1802,6 +1817,9 @@ function syncLwProducerUi() {
     if (delay) delay.value = String(session.settings.lw_sectionDelayMs ?? 400);
     if (torchMax) torchMax.value = String(session.settings.lw_torchMaxMs ?? 2000);
     if (waiting) waiting.value = session.settings.lw_waitingText || LW_DEFAULTS.lw_waitingText;
+    const requireRaise = session.settings.lw_requireRaise !== false;
+    if (triggerRaise) triggerRaise.checked = requireRaise;
+    if (triggerCountdown) triggerCountdown.checked = !requireRaise;
     if (startBtn) startBtn.disabled = !lwIsEnabled();
     if (stopBtnLw) stopBtnLw.disabled = !lwIsEnabled();
     setLwProgramDisabled(lwIsEnabled());
@@ -1813,6 +1831,7 @@ function persistLwFromInputs() {
     const delay = document.getElementById('lw_section-delay');
     const torchMax = document.getElementById('lw_torch-max');
     const waiting = document.getElementById('lw_waiting-text');
+    const triggerRaise = document.getElementById('lw_trigger-raise');
     const nextMode = toggle && toggle.checked ? 'lightwave' : 'default';
     const wasLightwave = session.settings.mode === 'lightwave';
     session.settings.mode = nextMode;
@@ -1822,6 +1841,7 @@ function persistLwFromInputs() {
         lw_sectionDelayMs: delay ? delay.value : session.settings.lw_sectionDelayMs,
         lw_torchMaxMs: torchMax ? torchMax.value : session.settings.lw_torchMaxMs,
         lw_waitingText: waiting ? waiting.value : session.settings.lw_waitingText,
+        lw_requireRaise: triggerRaise ? triggerRaise.checked : session.settings.lw_requireRaise,
     });
     if (nextMode === 'lightwave' && !wasLightwave && session.settings.activeProgram) {
         socket.emit('stop-program', token, session.settings.activeProgram, 'effect-end');
@@ -1838,6 +1858,8 @@ function initLwProducerControls() {
     const delay = document.getElementById('lw_section-delay');
     const torchMax = document.getElementById('lw_torch-max');
     const waiting = document.getElementById('lw_waiting-text');
+    const triggerRaise = document.getElementById('lw_trigger-raise');
+    const triggerCountdown = document.getElementById('lw_trigger-countdown');
     const startBtn = document.getElementById('lw_wave-start');
     const stopBtnLw = document.getElementById('lw_wave-stop');
     if (toggle) toggle.addEventListener('change', persistLwFromInputs);
@@ -1845,6 +1867,8 @@ function initLwProducerControls() {
     if (delay) delay.addEventListener('change', persistLwFromInputs);
     if (torchMax) torchMax.addEventListener('change', persistLwFromInputs);
     if (waiting) waiting.addEventListener('change', persistLwFromInputs);
+    if (triggerRaise) triggerRaise.addEventListener('change', persistLwFromInputs);
+    if (triggerCountdown) triggerCountdown.addEventListener('change', persistLwFromInputs);
     if (startBtn) {
         startBtn.addEventListener('click', () => {
             if (!lwIsEnabled()) return;
@@ -1853,6 +1877,7 @@ function initLwProducerControls() {
                 lw_torchMaxMs: session.settings.lw_torchMaxMs,
                 lw_countdownSeconds: session.settings.lw_countdownSeconds,
                 lw_sectionDelayMs: session.settings.lw_sectionDelayMs,
+                lw_requireRaise: session.settings.lw_requireRaise !== false,
             });
         });
     }
@@ -1862,7 +1887,7 @@ function initLwProducerControls() {
         });
     }
     socket.on('lw_wave-status', (payload) => {
-        renderLwOccupancy(payload && payload.occupied);
+        renderLwOccupancy(payload);
     });
     syncLwProducerUi();
 }

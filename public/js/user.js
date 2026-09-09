@@ -2,7 +2,18 @@ import { startTorchFlow, leaveTorchFlow, setTorch, getCameraStream } from './cam
 import { enableWakeLock, disableWakeLock } from './wake-lock.js';
 import { onTimeline, clearAllIntervalsAndTimeouts } from './timeline.js';
 import { initRecording, handleTouchStart, handleTouchMove, handleTouchEnd, handlePendingMediaClick, clearPendingMediaAndResetUI, hasPendingMedia, registerOnPendingMediaCleared } from './recording.js';
-import { lw_sync, lw_stop, lw_isActive, lw_applyLightwaveSettings } from './lw_mode.js';
+import {
+    lw_sync,
+    lw_stop,
+    lw_isActive,
+    lw_applyLightwaveSettings,
+    lw_normalizeMode,
+    lw_showJoinSection,
+    lw_prefillJoinSection,
+    lw_captureJoinSection,
+    lw_commitJoinSection,
+    lw_prepareMotionFromJoin,
+} from './lw_mode.js';
 /* --------------------------------------------------------------------------------------------------------------- */
 /* Initialize Socket.IO                                                                                            */
 /* --------------------------------------------------------------------------------------------------------------- */
@@ -46,6 +57,7 @@ const session = {
     lw_countdownSeconds: 3,
     lw_sectionDelayMs: 400,
     lw_waitingText: "You're in section {section}. Get ready.",
+    lw_requireRaise: true,
   },
   displayName: null
 }
@@ -105,6 +117,15 @@ document.addEventListener('DOMContentLoaded', () => {
             joinButton.style.cursor = ok ? '' : 'not-allowed';
         });
     }
+    const lwSectionInput = document.getElementById('lw_section-input');
+    if (lwSectionInput) {
+        lwSectionInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                joinButton.click();
+            }
+        });
+    }
     joinButton.addEventListener('click', async () => {
         //console.log('Join button clicked', token, Date.now());
         if (session.settings.joinRequiresConsent) {
@@ -113,11 +134,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
         }
+        const lightwaveOn = lw_normalizeMode(session.settings.mode) === 'lightwave';
+        let pendingSection = null;
+        if (lightwaveOn) {
+            pendingSection = lw_captureJoinSection(token);
+            if (!pendingSection) {
+                return;
+            }
+        }
         const originalJoinButtonText = joinButton.innerHTML;
         joinInProgress = true;
         joinButton.disabled = true;
         joinButton.style.pointerEvents = 'none';
         joinButton.innerHTML = '<div uk-spinner></div> Joining...';
+        if (lightwaveOn) {
+            try {
+                await lw_prepareMotionFromJoin();
+            } catch (_) {
+                // Fallback flash still works if motion is denied or missing.
+            }
+        }
         const requestMic = session.settings.requestMic;
         let result = null;
 
@@ -170,16 +206,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // enable screen wake lock after torch/camera access success
             joinButton.innerHTML = originalJoinButtonText;
-            infoText.innerHTML = session.settings.infoTextJoined;
             joinButton.style.display = 'none';
             const joinConsentRowOk = document.getElementById('join-consent-row');
             if (joinConsentRowOk) joinConsentRowOk.style.display = 'none';
             // Keep leave button hidden per requirements
             leaveButton.style.display = 'none';
+            lw_showJoinSection(false);
+            if (pendingSection) {
+                lw_commitJoinSection(socket, token, pendingSection);
+            }
+            if (lightwaveOn) {
+                infoText.style.display = 'none';
+                try { await setTorch(false); } catch (_) {}
+            } else {
+                infoText.innerHTML = session.settings.infoTextJoined;
+                infoText.style.display = 'block';
+            }
             try { await enableWakeLock(); } catch (_) {}
             joinInProgress = false;
             updateRecordingUI();
-            await syncLightwave();
+            await syncLightwave(pendingSection);
         } else {
             joined = false;
             joinAttempted = true;
@@ -214,6 +260,7 @@ document.addEventListener('DOMContentLoaded', () => {
         leaveButton.style.display = 'none';
         infoText.innerHTML = session.settings.infoTextOnboarding;
         updateJoinConsentUI();
+        updateLwJoinSectionUi();
         updateRecordingUI();
     });
 
@@ -628,8 +675,9 @@ function displaySettings(settings) {
         leaveButton.innerHTML = '<span class="mdi mdi-exit-to-app"></span>' + settings.leaveButtonText;
     }
 
+    const hideJoinedCopy = lw_normalizeMode(settings.mode) === 'lightwave' && joined;
     if (joined) {
-        if (settings.infoTextJoined) {
+        if (!hideJoinedCopy && settings.infoTextJoined) {
             //console.log('Info text joined: ', settings.infoTextJoined, typeof settings.infoTextJoined);
             infoText.innerHTML = settings.infoTextJoined;
         }
@@ -656,10 +704,11 @@ function displaySettings(settings) {
         // Also expose as CSS variable for themes
         //infoText.style.setProperty('--info-text-bg', settings.infoTextBgColor);
     }
-    infoText.style.display = 'block';
+    infoText.style.display = hideJoinedCopy ? 'none' : 'block';
 
     applyUserMlbSupportLinkHref();
     updateJoinConsentUI();
+    updateLwJoinSectionUi();
 
     if (settings.isMLB) {
         //console.log('MLB enabled');
@@ -721,7 +770,16 @@ function displaySettings(settings) {
 /* --------------------------------------------------------------------------------------------------------------- */
 /* PLAY                                                                                                            */
 /* --------------------------------------------------------------------------------------------------------------- */
-function syncLightwave() {
+function updateLwJoinSectionUi() {
+    const lightwaveOn = lw_normalizeMode(session.settings.mode) === 'lightwave';
+    const show = lightwaveOn && !joined && !session.settings.locked;
+    lw_showJoinSection(show);
+    if (show) {
+        lw_prefillJoinSection(token);
+    }
+}
+
+function syncLightwave(section) {
     return lw_sync({
         socket,
         token,
@@ -729,6 +787,7 @@ function syncLightwave() {
         joined,
         locked: !!session.settings.locked,
         log,
+        section,
     });
 }
 
@@ -815,6 +874,7 @@ async function handleShowEnd(settings = session.settings, assets = session.asset
             if (joinButton) {
                 joinButton.style.display = 'none';
             }
+            lw_showJoinSection(false);
             const infoContainer = document.getElementById('info-container');
             const infoText = document.getElementById('info-text');
             //console.log('### [handleShowEnd] infoContainer:', infoContainer);

@@ -96,15 +96,60 @@ function lw_buildSchedule(occupied, { epoch, delayMs, countdownMs = 0 } = {}) {
     }));
 }
 
-function lw_emitStatus(io, token) {
+/**
+ * Wave front: the most recently started GO window that is still open.
+ * @param {{ section: string, goAt: number }[]} schedule
+ * @param {number} now
+ * @param {number} torchMaxMs
+ * @returns {string|null}
+ */
+function lw_activeSectionAt(schedule, now, torchMaxMs) {
+    const cap = Number.isFinite(torchMaxMs) ? torchMaxMs : 2000;
+    const rows = Array.isArray(schedule) ? schedule : [];
+    let active = null;
+    let latestGo = -Infinity;
+    for (const row of rows) {
+        const goAt = Number(row && row.goAt);
+        if (!Number.isFinite(goAt)) continue;
+        if (now >= goAt && now < goAt + cap && goAt >= latestGo) {
+            latestGo = goAt;
+            active = row.section || null;
+        }
+    }
+    return active;
+}
+
+const waveStateByToken = new Map();
+
+function lw_clearWaveTimers(token) {
+    const state = waveStateByToken.get(token);
+    if (state && Array.isArray(state.timers)) {
+        for (const timer of state.timers) {
+            clearTimeout(timer);
+        }
+    }
+    waveStateByToken.delete(token);
+}
+
+function lw_statusPayload(io, token) {
     const occupied = lw_collectOccupied(io, token);
+    const state = waveStateByToken.get(token);
+    return {
+        occupied,
+        activeSection: state ? state.activeSection : null,
+        waveId: state ? state.waveId : null,
+    };
+}
+
+function lw_emitStatus(io, token) {
+    const payload = lw_statusPayload(io, token);
     const sockets = lw_socketsInRoom(io, token);
     for (const socket of sockets) {
         if (socket.data && socket.data.role === 'producer') {
-            socket.emit('lw_wave-status', { occupied });
+            socket.emit('lw_wave-status', payload);
         }
     }
-    return occupied;
+    return payload.occupied;
 }
 
 function lw_startWave(io, token, timing = {}) {
@@ -114,6 +159,7 @@ function lw_startWave(io, token, timing = {}) {
     const lw_torchMaxMs = Number.isFinite(torchMax) ? torchMax : 2000;
     const lw_countdownSeconds = Number.isFinite(countdownSeconds) ? countdownSeconds : 3;
     const lw_sectionDelayMs = Number.isFinite(delayMs) ? delayMs : 400;
+    const lw_requireRaise = timing.lw_requireRaise !== false;
     const sentAt = Date.now();
     const waveId = `lw_${sentAt}`;
     const occupied = lw_collectOccupied(io, token);
@@ -122,6 +168,36 @@ function lw_startWave(io, token, timing = {}) {
         delayMs: lw_sectionDelayMs,
         countdownMs: lw_countdownSeconds * 1000,
     });
+    lw_clearWaveTimers(token);
+    const timers = [];
+    const state = {
+        waveId,
+        schedule,
+        torchMaxMs: lw_torchMaxMs,
+        activeSection: null,
+        timers,
+    };
+    waveStateByToken.set(token, state);
+    for (const row of schedule) {
+        const delay = Math.max(0, row.goAt - Date.now());
+        timers.push(setTimeout(() => {
+            const current = waveStateByToken.get(token);
+            if (!current || current.waveId !== waveId) return;
+            current.activeSection = lw_activeSectionAt(current.schedule, Date.now(), current.torchMaxMs);
+            lw_emitStatus(io, token);
+        }, delay));
+    }
+    if (schedule.length) {
+        const last = schedule[schedule.length - 1];
+        const endDelay = Math.max(0, last.goAt + lw_torchMaxMs - Date.now());
+        timers.push(setTimeout(() => {
+            const current = waveStateByToken.get(token);
+            if (!current || current.waveId !== waveId) return;
+            current.activeSection = null;
+            lw_emitStatus(io, token);
+            lw_clearWaveTimers(token);
+        }, endDelay));
+    }
     const sockets = lw_socketsInRoom(io, token);
     for (const row of schedule) {
         const cue = {
@@ -131,6 +207,7 @@ function lw_startWave(io, token, timing = {}) {
             sentAt,
             lw_torchMaxMs,
             lw_countdownSeconds,
+            lw_requireRaise,
         };
         for (const socket of sockets) {
             if (socket.data && socket.data.role === 'user' && lw_normalizeSection(socket.data.lw_section) === row.section) {
@@ -144,9 +221,12 @@ function lw_startWave(io, token, timing = {}) {
 }
 
 function lw_stopWave(io, token, waveId) {
-    const id = waveId || `lw_${Date.now()}`;
+    const state = token ? waveStateByToken.get(token) : null;
+    const id = waveId || (state && state.waveId) || `lw_${Date.now()}`;
+    lw_clearWaveTimers(token);
     if (io && token) {
         io.to(token).emit('lw_wave-stop', { token, waveId: id });
+        lw_emitStatus(io, token);
     }
     console.log('### lw_wave-stop', { token, waveId: id });
     return id;
@@ -158,6 +238,7 @@ module.exports = {
     lw_collectOccupiedFromSockets,
     lw_collectOccupied,
     lw_buildSchedule,
+    lw_activeSectionAt,
     lw_emitStatus,
     lw_startWave,
     lw_stopWave,

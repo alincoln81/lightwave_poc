@@ -28,9 +28,10 @@
         <ul uk-tab role="tablist" class="uk-tab uk-flex-center">
             
             <li role="presentation" class="uk-active"><a href="#" id="uk-tab-0" role="tab"><span class="mdi mdi-theater"></span>Show Controls</a></li>
-            <li role="presentation" ><a href="#" id="uk-tab-1" role="tab"><span class="mdi mdi-tools"></span>Program Builder</a></li>
-            <li role="presentation" ><a href="#" id="uk-tab-2" role="tab"><span class="mdi mdi-cellphone"></span>Input</a></li>
-            <li role="presentation" ><a href="#" id="uk-tab-3" role="tab"><span class="mdi mdi-monitor"></span>Output</a></li>
+            <li role="presentation" ><a href="#" id="uk-tab-1" role="tab"><span class="mdi mdi-waves"></span>Lightwave</a></li>
+            <li role="presentation" ><a href="#" id="uk-tab-2" role="tab"><span class="mdi mdi-tools"></span>Program Builder</a></li>
+            <li role="presentation" ><a href="#" id="uk-tab-3" role="tab"><span class="mdi mdi-cellphone"></span>Input</a></li>
+            <li role="presentation" ><a href="#" id="uk-tab-4" role="tab"><span class="mdi mdi-monitor"></span>Output</a></li>
             
         </ul>
 
@@ -77,8 +78,11 @@
                     </div>
                     
                 </div>
+            </div>
 
-                <div id="lw_card" class="uk-card uk-card-default uk-card-body uk-margin">
+            <!-- Lightwave -->
+            <div id="lw_panel" role="tabpanel" aria-labelledby="uk-tab-1">
+                <div id="lw_card" class="uk-card uk-card-default-primary uk-card-body uk-margin">
                     <h3 class="uk-card-title uk-margin-remove-top">Lightwave</h3>
                     <p class="uk-text-muted uk-text-small">When on, phones follow a section wave instead of audio effects. Users enter a section number (or open a link with <code>?lw_section=142</code>).</p>
                     <div class="lw_mode-row">
@@ -87,6 +91,17 @@
                             Enable Lightwave mode
                         </label>
                     </div>
+                    <fieldset class="lw_trigger-row">
+                        <legend>Torch after countdown</legend>
+                        <label for="lw_trigger-countdown">
+                            <input id="lw_trigger-countdown" name="lw_torch-trigger" class="uk-radio" type="radio" value="countdown">
+                            Turn torch on for every phone in the section
+                        </label>
+                        <label for="lw_trigger-raise">
+                            <input id="lw_trigger-raise" name="lw_torch-trigger" class="uk-radio" type="radio" value="raise" checked>
+                            Only turn torch on if a raised phone is detected
+                        </label>
+                    </fieldset>
                     <div class="lw_timing-row">
                         <label for="lw_countdown-seconds">Countdown (sec)</label>
                         <input id="lw_countdown-seconds" class="uk-input" type="number" min="1" max="10" step="1" value="3">
@@ -103,13 +118,14 @@
                         <button type="button" id="lw_wave-start" class="uk-button uk-button-primary">Start Wave</button>
                         <button type="button" id="lw_wave-stop" class="uk-button uk-button-default">Stop Wave</button>
                     </div>
+                    <p id="lw_active-section" class="lw_active-section">No wave in progress</p>
                     <h4 class="uk-margin-small-bottom">Occupied sections</h4>
                     <ul id="lw_occupancy"></ul>
                 </div>
             </div>
 
             <!-- Program Builder -->
-            <div id="program-builder" role="tabpanel" aria-labelledby="uk-tab-1">
+            <div id="program-builder" role="tabpanel" aria-labelledby="uk-tab-2">
                 <div class="uk-card uk-card-default-primary uk-card-body uk-margin">
                     <h3 class="uk-margin-remove-bottom"> Program Builder</h3>
                     <div class="uk-margin-small-top uk-flex uk-flex-bottom" uk-grid>
@@ -144,7 +160,7 @@
             </div>
 
             <!-- Input -->
-            <div id="input" role="tabpanel" aria-labelledby="uk-tab-2">
+            <div id="input" role="tabpanel" aria-labelledby="uk-tab-3">
                 <div class="uk-card uk-card-default-primary uk-card-body uk-margin">
                     <div uk-grid class="uk-margin-small-bottom">
                         <div class="uk-width-expand">
@@ -521,7 +537,7 @@
             </div>
 
             <!-- Output -->
-            <div id="output" role="tabpanel" aria-labelledby="uk-tab-3">
+            <div id="output" role="tabpanel" aria-labelledby="uk-tab-4">
                 <div class="uk-card uk-card-default-primary uk-card-body uk-margin">
 
                     <div uk-grid class="uk-margin-small-bottom">

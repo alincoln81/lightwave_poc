@@ -6,6 +6,7 @@ const require = createRequire(import.meta.url);
 const {
     lw_buildSchedule,
     lw_collectOccupiedFromSockets,
+    lw_activeSectionAt,
 } = require('../server/lw_wave.js');
 
 describe('lw_buildSchedule', () => {
@@ -45,5 +46,28 @@ describe('lw_collectOccupiedFromSockets', () => {
             { section: '101', count: 1 },
             { section: '110', count: 2 },
         ]);
+    });
+});
+
+describe('lw_activeSectionAt', () => {
+    const schedule = [
+        { section: '101', goAt: 1000 },
+        { section: '110', goAt: 1400 },
+    ];
+
+    it('is null before the first GO', () => {
+        assert.equal(lw_activeSectionAt(schedule, 999, 2000), null);
+    });
+
+    it('returns the current GO section', () => {
+        assert.equal(lw_activeSectionAt(schedule, 1000, 2000), '101');
+    });
+
+    it('returns the later overlapping GO as the wave front', () => {
+        assert.equal(lw_activeSectionAt(schedule, 1400, 2000), '110');
+    });
+
+    it('is null after the last torch window', () => {
+        assert.equal(lw_activeSectionAt(schedule, 3400, 2000), null);
     });
 });
