@@ -76,6 +76,33 @@ describe('lw_shouldTorchBeOn', () => {
         }), true);
     });
 
+    it('follows raise and lower with no GO or max when followPose is on', () => {
+        assert.equal(lw_shouldTorchBeOn({
+            goActive: false,
+            raised: true,
+            fallback: false,
+            elapsedMs: 0,
+            maxMs,
+            followPose: true,
+        }), true);
+        assert.equal(lw_shouldTorchBeOn({
+            goActive: false,
+            raised: false,
+            fallback: false,
+            elapsedMs: 0,
+            maxMs,
+            followPose: true,
+        }), false);
+        assert.equal(lw_shouldTorchBeOn({
+            goActive: false,
+            raised: true,
+            fallback: false,
+            elapsedMs: 9000,
+            maxMs,
+            followPose: true,
+        }), true);
+    });
+
     it('still turns off at max when offOnlyAtMax is latched', () => {
         assert.equal(lw_shouldTorchBeOn({
             goActive: true,

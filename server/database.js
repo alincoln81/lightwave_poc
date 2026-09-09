@@ -302,6 +302,7 @@ async function setSettings(data, firestoreRoot, type) {
         : (settings.lw_lowerSensitivity ?? 5);
       settings.lw_offOnlyAtMax = data.lw_offOnlyAtMax === true;
       settings.lw_loop = data.lw_loop === true;
+      settings.lw_followPose = data.lw_followPose === true;
       settings.paused = data.paused;
       settings.playing = data.playing;
       settings.redirectUrl = data.redirectUrl;

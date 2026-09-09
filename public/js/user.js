@@ -13,6 +13,7 @@ import {
     lw_captureJoinSection,
     lw_commitJoinSection,
     lw_prepareMotionFromJoin,
+    lw_followPoseEnabled,
 } from './lw_mode.js';
 /* --------------------------------------------------------------------------------------------------------------- */
 /* Initialize Socket.IO                                                                                            */
@@ -63,6 +64,7 @@ const session = {
     lw_lowerSensitivity: 5,
     lw_offOnlyAtMax: false,
     lw_loop: false,
+    lw_followPose: false,
   },
   displayName: null
 }
@@ -140,8 +142,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         const lightwaveOn = lw_normalizeMode(session.settings.mode) === 'lightwave';
+        const followPose = lw_followPoseEnabled(session.settings);
         let pendingSection = null;
-        if (lightwaveOn) {
+        if (lightwaveOn && !followPose) {
             pendingSection = lw_captureJoinSection(token);
             if (!pendingSection) {
                 return;
@@ -777,7 +780,7 @@ function displaySettings(settings) {
 /* --------------------------------------------------------------------------------------------------------------- */
 function updateLwJoinSectionUi() {
     const lightwaveOn = lw_normalizeMode(session.settings.mode) === 'lightwave';
-    const show = lightwaveOn && !joined && !session.settings.locked;
+    const show = lightwaveOn && !joined && !session.settings.locked && !lw_followPoseEnabled(session.settings);
     lw_showJoinSection(show);
     if (show) {
         lw_prefillJoinSection(token);

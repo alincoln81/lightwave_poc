@@ -2,6 +2,7 @@
  * Lightwave torch gate: ON only during the GO window, never longer than
  * lw_torchMaxMs after torch-on. When requireRaise is true, also needs a
  * raised pose (or sensor fallback). When false, GO turns the torch on.
+ * followPose skips the GO window and max cap: on while raised, off while not.
  */
 
 let goActive = false;
@@ -9,6 +10,7 @@ let raised = false;
 let fallback = false;
 let requireRaise = true;
 let offOnlyAtMax = false;
+let followPose = false;
 let maxMs = 3000;
 let torchOnAt = null;
 let desiredOn = false;
@@ -17,7 +19,7 @@ let capTimer = null;
 /**
  * Pure gate used by tests and the live controller.
  * elapsedMs is time since torch turned on (0 if off).
- * @param {{ goActive: boolean, raised: boolean, fallback: boolean, elapsedMs: number, maxMs: number, requireRaise?: boolean, offOnlyAtMax?: boolean, latched?: boolean }} input
+ * @param {{ goActive: boolean, raised: boolean, fallback: boolean, elapsedMs: number, maxMs: number, requireRaise?: boolean, offOnlyAtMax?: boolean, latched?: boolean, followPose?: boolean }} input
  * @returns {boolean}
  */
 export function lw_shouldTorchBeOn({
@@ -29,7 +31,9 @@ export function lw_shouldTorchBeOn({
     requireRaise: needRaise = true,
     offOnlyAtMax: keepUntilMax = false,
     latched = false,
+    followPose: poseOnly = false,
 }) {
+    if (poseOnly) return !!isRaised;
     if (!go) return false;
     const limit = Number.isFinite(cap) ? cap : 3000;
     if (Number.isFinite(elapsedMs) && elapsedMs >= limit) return false;
@@ -60,6 +64,7 @@ async function applyDesired() {
         maxMs,
         requireRaise,
         offOnlyAtMax,
+        followPose,
         latched: torchOnAt !== null,
     });
     if (shouldOn === desiredOn && !(shouldOn && torchOnAt === null)) {
@@ -73,11 +78,13 @@ async function applyDesired() {
     if (shouldOn) {
         if (torchOnAt === null) torchOnAt = Date.now();
         clearCapTimer();
-        const remaining = Math.max(0, maxMs - elapsedSinceOn());
-        capTimer = setTimeout(() => {
-            capTimer = null;
-            applyDesired();
-        }, remaining);
+        if (!followPose) {
+            const remaining = Math.max(0, maxMs - elapsedSinceOn());
+            capTimer = setTimeout(() => {
+                capTimer = null;
+                applyDesired();
+            }, remaining);
+        }
         await setTorch(true);
     } else {
         torchOnAt = null;
@@ -91,11 +98,13 @@ export function lw_torchConfigure({
     fallback: nextFallback,
     requireRaise: nextRequireRaise,
     offOnlyAtMax: nextOffOnlyAtMax,
+    followPose: nextFollowPose,
 } = {}) {
     if (Number.isFinite(nextMax)) maxMs = nextMax;
     if (typeof nextFallback === 'boolean') fallback = nextFallback;
     if (typeof nextRequireRaise === 'boolean') requireRaise = nextRequireRaise;
     if (typeof nextOffOnlyAtMax === 'boolean') offOnlyAtMax = nextOffOnlyAtMax;
+    if (typeof nextFollowPose === 'boolean') followPose = nextFollowPose;
 }
 
 export async function lw_torchSetGoActive(active) {
@@ -127,6 +136,7 @@ export function lw_torchReset() {
     fallback = false;
     requireRaise = true;
     offOnlyAtMax = false;
+    followPose = false;
     maxMs = 3000;
     torchOnAt = null;
     desiredOn = false;

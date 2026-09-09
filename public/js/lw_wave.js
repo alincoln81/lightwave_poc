@@ -21,6 +21,7 @@ let endTimer = null;
 let lowerTimer = null;
 let cueHandler = null;
 let stopHandler = null;
+let followPose = false;
 
 const LW_LOWER_HOLD_MS = 2500;
 
@@ -63,7 +64,12 @@ async function endGoWindow() {
     }, LW_LOWER_HOLD_MS);
 }
 
+export function lw_waveSetFollowPose(enabled) {
+    followPose = enabled === true;
+}
+
 async function handleCue(cue) {
+    if (followPose) return;
     if (!cue || cue.section !== mySection) return;
     if (activeWaveId && cue.waveId && cue.waveId === activeWaveId) {
         // Same wave duplicate
@@ -135,6 +141,7 @@ export function lw_waveStopListeners() {
 
 export async function lw_waveReset() {
     activeWaveId = null;
+    followPose = false;
     clearWaveTimers();
     await lw_torchOff();
     lw_stopCountdown(false);

@@ -28,8 +28,11 @@ import {
     lw_setCountdownSeconds,
     lw_showWaiting,
     lw_hideAll,
+    lw_showOverlay,
+    lw_setOverlayText,
+    lw_stopCountdown,
 } from './lw_countdown.js';
-import { lw_waveStart, lw_waveSetSection, lw_waveReset } from './lw_wave.js';
+import { lw_waveStart, lw_waveSetSection, lw_waveReset, lw_waveSetFollowPose } from './lw_wave.js';
 
 export const LW_DEFAULTS = {
     lw_torchMaxMs: 3000,
@@ -42,10 +45,12 @@ export const LW_DEFAULTS = {
     lw_lowerSensitivity: 5,
     lw_offOnlyAtMax: false,
     lw_loop: false,
+    lw_followPose: false,
 };
 
 let active = false;
 let ctx = null;
+let lastFollowPose = false;
 let lastPermission = null;
 let debugSamples = 0;
 let debugPose = 'waiting';
@@ -98,6 +103,15 @@ export function lw_applyLightwaveSettings(target, settings) {
     } else if (typeof target.lw_loop !== 'boolean') {
         target.lw_loop = LW_DEFAULTS.lw_loop;
     }
+    if (typeof src.lw_followPose === 'boolean') {
+        target.lw_followPose = src.lw_followPose;
+    } else if (typeof target.lw_followPose !== 'boolean') {
+        target.lw_followPose = LW_DEFAULTS.lw_followPose;
+    }
+}
+
+export function lw_followPoseEnabled(settings) {
+    return settings?.lw_followPose === true;
 }
 
 /**
@@ -187,8 +201,19 @@ function poseReporterOptions() {
     };
 }
 
+function applyFollowPoseUi() {
+    lw_stopCountdown(false);
+    lw_setOverlayText('');
+    if (ctx?.settings?.lw_debugOverlay) {
+        lw_showOverlay(true);
+    } else {
+        lw_showOverlay(false);
+    }
+}
+
 function applyTimingFromSettings() {
     const settings = ctx?.settings || {};
+    const follow = lw_followPoseEnabled(settings);
     lw_setWaitingText(settings.lw_waitingText || LW_DEFAULTS.lw_waitingText);
     lw_setCountdownSeconds(settings.lw_countdownSeconds || LW_DEFAULTS.lw_countdownSeconds);
     lw_torchConfigure({
@@ -196,11 +221,21 @@ function applyTimingFromSettings() {
         fallback: lastPermission === 'denied' || lastPermission === 'unsupported',
         requireRaise: settings.lw_requireRaise !== false,
         offOnlyAtMax: settings.lw_offOnlyAtMax === true,
+        followPose: follow,
     });
     lw_poseConfigure({
         raiseSensitivity: settings.lw_raiseSensitivity,
         lowerSensitivity: settings.lw_lowerSensitivity,
     });
+    lw_waveSetFollowPose(follow);
+    if (follow) {
+        applyFollowPoseUi();
+    } else if (lastFollowPose && active) {
+        const section = ctx?.section || null;
+        if (section) lw_showWaiting(section);
+        else lw_hideAll();
+    }
+    lastFollowPose = follow;
     paintDebug();
 }
 
@@ -299,12 +334,18 @@ async function lw_start(nextCtx) {
     applyTimingFromSettings();
     lw_waveStart(ctx.socket);
 
-    const existing = nextCtx.section || lw_resolveSection(ctx.token);
-    if (existing) {
-        assignSection(existing);
-    } else {
+    const follow = lw_followPoseEnabled(nextCtx.settings);
+    if (follow) {
         lw_waveSetSection(null);
-        lw_showWaiting('');
+        applyFollowPoseUi();
+    } else {
+        const existing = nextCtx.section || lw_resolveSection(ctx.token);
+        if (existing) {
+            assignSection(existing);
+        } else {
+            lw_waveSetSection(null);
+            lw_showWaiting('');
+        }
     }
 
     if (lastPermission === 'granted') {
@@ -326,7 +367,11 @@ async function lw_start(nextCtx) {
         emitPoseLog('first-sample');
     }
 
-    await lw_torchOff();
+    if (follow) {
+        await lw_torchSetRaised(lw_getPose() === 'raised');
+    } else {
+        await lw_torchOff();
+    }
     active = true;
 }
 
@@ -338,6 +383,7 @@ async function lw_stopInternal() {
     lw_torchReset();
     lw_hideAll();
     lastPermission = null;
+    lastFollowPose = false;
     debugSamples = 0;
     debugPose = 'waiting';
     paintDebug();
@@ -353,7 +399,14 @@ export async function lw_sync(nextCtx) {
     const shouldRun = !!(nextCtx.joined && !nextCtx.locked && lw_normalizeMode(nextCtx.settings?.mode) === 'lightwave');
     if (shouldRun) {
         if (active) {
+            const follow = lw_followPoseEnabled(nextCtx.settings);
+            const leavingFollow = lastFollowPose && !follow;
             applyTimingFromSettings();
+            if (follow) {
+                await lw_torchSetRaised(lw_getPose() === 'raised');
+            } else if (leavingFollow) {
+                await lw_torchOff();
+            }
             return;
         }
         await lw_start(nextCtx);

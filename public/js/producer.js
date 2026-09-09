@@ -103,6 +103,7 @@ const session = {
         lw_lowerSensitivity: LW_DEFAULTS.lw_lowerSensitivity,
         lw_offOnlyAtMax: LW_DEFAULTS.lw_offOnlyAtMax,
         lw_loop: LW_DEFAULTS.lw_loop,
+        lw_followPose: LW_DEFAULTS.lw_followPose,
         paused: true,
         playing: false,
         redirectUrl: null,
@@ -1822,10 +1823,12 @@ function syncLwProducerUi() {
     const lowerSens = document.getElementById('lw_lower-sensitivity');
     const offOnlyMax = document.getElementById('lw_off-only-max');
     const loopWave = document.getElementById('lw_loop');
+    const followPose = document.getElementById('lw_follow-pose');
     const startBtn = document.getElementById('lw_wave-start');
     const stopBtnLw = document.getElementById('lw_wave-stop');
     if (toggle) toggle.checked = lwIsEnabled();
     if (debugOverlay) debugOverlay.checked = session.settings.lw_debugOverlay === true;
+    if (followPose) followPose.checked = session.settings.lw_followPose === true;
     if (raiseSens) raiseSens.value = String(session.settings.lw_raiseSensitivity ?? 5);
     if (lowerSens) lowerSens.value = String(session.settings.lw_lowerSensitivity ?? 5);
     if (offOnlyMax) offOnlyMax.checked = session.settings.lw_offOnlyAtMax === true;
@@ -1837,7 +1840,8 @@ function syncLwProducerUi() {
     const requireRaise = session.settings.lw_requireRaise !== false;
     if (triggerRaise) triggerRaise.checked = requireRaise;
     if (triggerCountdown) triggerCountdown.checked = !requireRaise;
-    if (startBtn) startBtn.disabled = !lwIsEnabled();
+    const followOn = session.settings.lw_followPose === true;
+    if (startBtn) startBtn.disabled = !lwIsEnabled() || followOn;
     if (stopBtnLw) stopBtnLw.disabled = !lwIsEnabled();
     setLwProgramDisabled(lwIsEnabled());
 }
@@ -1854,6 +1858,7 @@ function persistLwFromInputs() {
     const lowerSens = document.getElementById('lw_lower-sensitivity');
     const offOnlyMax = document.getElementById('lw_off-only-max');
     const loopWave = document.getElementById('lw_loop');
+    const followPose = document.getElementById('lw_follow-pose');
     const nextMode = toggle && toggle.checked ? 'lightwave' : 'default';
     const wasLightwave = session.settings.mode === 'lightwave';
     session.settings.mode = nextMode;
@@ -1869,6 +1874,7 @@ function persistLwFromInputs() {
         lw_lowerSensitivity: lowerSens ? lowerSens.value : session.settings.lw_lowerSensitivity,
         lw_offOnlyAtMax: offOnlyMax ? offOnlyMax.checked : session.settings.lw_offOnlyAtMax,
         lw_loop: loopWave ? loopWave.checked : session.settings.lw_loop,
+        lw_followPose: followPose ? followPose.checked : session.settings.lw_followPose,
     });
     if (nextMode === 'lightwave' && !wasLightwave && session.settings.activeProgram) {
         socket.emit('stop-program', token, session.settings.activeProgram, 'effect-end');
@@ -1892,6 +1898,7 @@ function initLwProducerControls() {
     const lowerSens = document.getElementById('lw_lower-sensitivity');
     const offOnlyMax = document.getElementById('lw_off-only-max');
     const loopWave = document.getElementById('lw_loop');
+    const followPose = document.getElementById('lw_follow-pose');
     const startBtn = document.getElementById('lw_wave-start');
     const stopBtnLw = document.getElementById('lw_wave-stop');
     if (toggle) toggle.addEventListener('change', persistLwFromInputs);
@@ -1906,9 +1913,10 @@ function initLwProducerControls() {
     if (lowerSens) lowerSens.addEventListener('change', persistLwFromInputs);
     if (offOnlyMax) offOnlyMax.addEventListener('change', persistLwFromInputs);
     if (loopWave) loopWave.addEventListener('change', persistLwFromInputs);
+    if (followPose) followPose.addEventListener('change', persistLwFromInputs);
     if (startBtn) {
         startBtn.addEventListener('click', () => {
-            if (!lwIsEnabled()) return;
+            if (!lwIsEnabled() || session.settings.lw_followPose === true) return;
             socket.emit('lw_wave-start', {
                 token,
                 lw_torchMaxMs: session.settings.lw_torchMaxMs,
