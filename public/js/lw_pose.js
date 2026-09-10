@@ -11,8 +11,9 @@ const HEARTBEAT_MS = 2000;
 const NO_SAMPLE_MS = 3000;
 const CALIBRATE_SAMPLES = 10;
 const CALIBRATE_MS = 200;
-const GRAVITY_TAU_SEC = 0.22;
+const GRAVITY_TAU_SEC = 0.5;
 const TRAVEL_DECAY_TAU_SEC = 0.12;
+const LOWER_DECAY_TAU_SEC = 0.32;
 const MAX_DT_SEC = 0.05;
 const MIN_DT_SEC = 0.008;
 const DEADZONE_MS2 = 0.45;
@@ -63,9 +64,9 @@ export function lw_thresholdsFromSensitivity(raiseSensitivity, lowerSensitivity)
         raiseAccel: lerp(2.8, 1.0, tRaise),
         raiseTravel: lerp(0.85, 0.22, tRaise),
         raiseHoldMs: lerp(180, 60, tRaise),
-        lowerAccel: lerp(2.0, 0.7, tLower),
-        lowerTravel: lerp(0.70, 0.14, tLower),
-        lowerHoldMs: lerp(180, 50, tLower),
+        lowerAccel: lerp(1.5, 0.32, tLower),
+        lowerTravel: lerp(0.48, 0.07, tLower),
+        lowerHoldMs: lerp(140, 28, tLower),
         orientConfirmMs: lerp(220, 70, tRaise),
     };
 }
@@ -147,7 +148,7 @@ export function lw_orientationLooksRaised(g, thresholds = liveThresholds) {
  *   gravX: number, gravY: number, gravZ: number,
  *   raiseTravel: number, lowerTravel: number,
  *   raiseHoldMs: number, lowerHoldMs: number, orientHoldMs: number,
- *   gravReady: boolean,
+ *   lastAngleDeg: number|null, gravReady: boolean,
  * }}
  */
 export function lw_createPoseState() {
@@ -161,6 +162,7 @@ export function lw_createPoseState() {
         raiseHoldMs: 0,
         lowerHoldMs: 0,
         orientHoldMs: 0,
+        lastAngleDeg: null,
         gravReady: false,
         baselineReady: false,
         calibSamples: 0,
@@ -219,19 +221,65 @@ function updateGravity(state, sample, dtSec) {
     state.gravZ += alpha * (gz - state.gravZ);
 }
 
-/**
- * World-up linear accel, plus extra when the portrait top (camera) lifts.
- * Positive = going up. Negative = coming down.
- */
-function worldUpAccel(lin, state) {
+function worldUpUnit(state) {
     const mag = Math.hypot(state.gravX, state.gravY, state.gravZ);
-    if (!mag) return 0;
-    const upX = -state.gravX / mag;
-    const upY = -state.gravY / mag;
-    const upZ = -state.gravZ / mag;
-    const upA = lin.x * upX + lin.y * upY + lin.z * upZ;
-    const topAlongUp = Math.max(0, upY) * lin.y;
-    return upA + 0.35 * Math.max(0, topAlongUp);
+    if (!mag) return { x: 0, y: 1, z: 0 };
+    return {
+        x: -state.gravX / mag,
+        y: -state.gravY / mag,
+        z: -state.gravZ / mag,
+    };
+}
+
+function accelAlong(lin, axis) {
+    return lin.x * axis.x + lin.y * axis.y + lin.z * axis.z;
+}
+
+/**
+ * Camera end (portrait +Y) lifting along world-up.
+ */
+function raiseSignal(lin, state) {
+    const up = worldUpUnit(state);
+    const upA = accelAlong(lin, up);
+    const topUp = Math.max(0, up.y) * Math.max(0, lin.y);
+    return upA + 0.35 * topUp;
+}
+
+/**
+ * Whole-phone / charging-port end moving toward the ground.
+ * Does not reuse the raise bonus, so a drop is not cancelled by top-end math.
+ */
+function lowerSignal(lin, state) {
+    const up = worldUpUnit(state);
+    const worldDown = -accelAlong(lin, up);
+    const bottomDown = Math.max(0, -lin.y) * Math.max(0, up.y);
+    const topTowardGround = Math.max(0, lin.y) * Math.max(0, -up.y);
+    return worldDown + 0.55 * bottomDown + 0.55 * topTowardGround;
+}
+
+function decayLowerTravel(value, dtSec) {
+    return value * Math.exp(-dtSec / LOWER_DECAY_TAU_SEC);
+}
+
+/**
+ * Degrees returned toward the home hold this sample. Used because people
+ * usually lower by rotating the phone back down, not a sharp drop.
+ */
+function homeReturnDeg(sample, state) {
+    const now = lw_poseMetrics({ gx: sample.gx, gy: sample.gy, gz: sample.gz });
+    if (!now.ok) return 0;
+    const prev = Number(state.lastAngleDeg);
+    state.lastAngleDeg = now.angleDeg;
+    if (!Number.isFinite(prev)) return 0;
+    const home = lw_poseMetrics({
+        gx: state.baseGx,
+        gy: state.baseGy,
+        gz: state.baseGz,
+    });
+    const homeAngle = home.ok ? home.angleDeg : 0;
+    if (now.angleDeg + 8 < homeAngle) return 0;
+    if (prev < homeAngle + 28) return 0;
+    return Math.min(8, Math.max(0, prev - now.angleDeg));
 }
 
 function finishCalibration(state, thresholds) {
@@ -291,7 +339,8 @@ function collectBaseline(state, sample, dtSec) {
  * Advance the pose tracker by one motion sample.
  * Starts neutral while the first samples capture the home hold, then
  * classifies raised/lowered from that initial position. Raise is a short
- * camera-end lift from home; lower is a longer downward drop only.
+ * camera-end lift from home; lower is world-down travel plus rotating
+ * back toward the home hold.
  * @param {ReturnType<typeof lw_createPoseState>} state
  * @param {{ gx: number, gy: number, gz: number, ax?: number, ay?: number, az?: number, dtSec?: number }} sample
  * @param {object} [thresholds]
@@ -309,9 +358,8 @@ export function lw_advancePose(state, sample, thresholds = liveThresholds) {
     }
     updateGravity(state, sample, dtSec);
     const lin = linearFromSample(sample, state);
-    const upA = worldUpAccel(lin, state);
-    const raiseA = upA;
-    const lowerA = -upA;
+    const raiseA = raiseSignal(lin, state);
+    const lowerA = lowerSignal(lin, state);
     const nowRaised = state.pose === 'raised';
 
     if (!nowRaised) {
@@ -340,6 +388,8 @@ export function lw_advancePose(state, sample, thresholds = liveThresholds) {
             state.orientHoldMs = 0;
             state.lowerTravel = 0;
             state.lowerHoldMs = 0;
+            const now = lw_poseMetrics({ gx: sample.gx, gy: sample.gy, gz: sample.gz });
+            state.lastAngleDeg = now.ok ? now.angleDeg : null;
         }
         return state.pose;
     }
@@ -347,17 +397,20 @@ export function lw_advancePose(state, sample, thresholds = liveThresholds) {
     state.raiseTravel = 0;
     state.raiseHoldMs = 0;
     state.orientHoldMs = 0;
-    if (lowerA > thresholds.lowerAccel && lowerA > DEADZONE_MS2) {
-        state.lowerTravel += lowerA * dtSec;
+    const closingDeg = homeReturnDeg(sample, state);
+    const accelOk = lowerA > Math.max(thresholds.lowerAccel, DEADZONE_MS2);
+    if (accelOk || closingDeg > 0.35) {
+        state.lowerTravel += lowerA * dtSec + closingDeg * 0.014;
         state.lowerHoldMs += dtSec * 1000;
     } else {
-        state.lowerTravel = decayTravel(state.lowerTravel, dtSec);
-        state.lowerHoldMs = 0;
+        state.lowerTravel = decayLowerTravel(state.lowerTravel, dtSec);
+        state.lowerHoldMs = Math.max(0, state.lowerHoldMs - dtSec * 400);
     }
     if (state.lowerTravel >= thresholds.lowerTravel && state.lowerHoldMs >= thresholds.lowerHoldMs) {
         state.pose = 'lowered';
         state.lowerTravel = 0;
         state.lowerHoldMs = 0;
+        state.lastAngleDeg = null;
     }
     return state.pose;
 }

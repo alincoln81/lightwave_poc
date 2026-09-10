@@ -233,6 +233,24 @@ describe('lw_advancePose', () => {
         assert.equal(drivePose(easyState, easyLower, uprightSample({ ay: -4.2 }), 8), 'lowered');
     });
 
+    it('tracks a moderate downward travel at lower sensitivity 8', () => {
+        const mid = lw_thresholdsFromSensitivity(5, 8);
+        const state = primedState('raised');
+        assert.equal(drivePose(state, mid, uprightSample({ ay: -1.4 }), 16), 'lowered');
+    });
+
+    it('counts rotating back toward the home hold as a lower', () => {
+        const easy = lw_thresholdsFromSensitivity(5, 8);
+        const state = primedState('raised');
+        state.lastAngleDeg = 180;
+        let pose = state.pose;
+        for (let i = 0; i <= 18; i += 1) {
+            const t = i / 18;
+            pose = lw_advancePose(state, uprightSample({ gy: 9.8 * (1 - 2 * t) }), easy);
+        }
+        assert.equal(pose, 'lowered');
+    });
+
     it('treats a subtle tilt posture as raised only when raise sensitivity is high', () => {
         const deg = 25 * (Math.PI / 180);
         const tilt = uprightSample({

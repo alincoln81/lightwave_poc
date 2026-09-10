@@ -540,6 +540,7 @@ Producer Stop / mode default → lw_wave-stop / lw_mode.stop → torch off
 | Raise easier than lower at the same slider | At 5/5, raise needs more travel than lower | Raise was too hot, lower too stiff | Phone debug shows travel vs remaining |
 | Single Lightwave form | Three-column studio UI; Section Wave toggle swaps wave vs free-pose fields | Owner mock | Joined text, torch min, off-on-lower, wave-complete text |
 | Follow-pose torch only tracks raise/lower | If off-on-lower is off, each phone picks a random off delay between torch min and max | Owner request | Torches do not all go dark together |
+| Lower is `-raiseSignal` with fast travel decay | Separate `lowerSignal` (world-down + phone-end toward ground) plus home-return rotation; slower lower decay; Lightwave tab uses the same card chrome as other tabs | Lower slider 8 still missed a normal drop because raise bonus and gravity LP hid downward motion | Down travel and rotate-back both count; wobble still cannot exit raised |
 
 ### C.5 Skipped or deferred work
 
@@ -796,3 +797,4 @@ Producer Stop / mode default → lw_wave-stop / lw_mode.stop → torch off
 | CL-011 | 2026-09-09 | edit | C | Follow-pose toggle: torch tracks raise/lower without section or countdown | Amber | — |
 | CL-012 | 2026-09-09 | edit | C | Travel debug on phone; raise harder / lower easier at the same slider | Amber | — |
 | CL-013 | 2026-09-09 | edit | C | Lightwave studio UI; joined text; random torch-off between min and max | Amber | — |
+| CL-014 | 2026-09-09 | edit | C | Restore Lightwave card chrome; split raise/lower signals; count rotate-back as lower | Amber | — |
