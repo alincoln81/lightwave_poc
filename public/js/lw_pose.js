@@ -1,7 +1,8 @@
 /**
- * Lightwave pose: raised when the camera end (portrait top) lifts
- * upward; lowered when the charging-port end / phone body drops down.
- * Exit is motion-only so orientation wobble cannot flicker the torch.
+ * Lightwave pose: raised on a real camera-end lift or a held overhead /
+ * inverted pose. Lowered on world-down travel or rotating back toward
+ * the home hold. A modest tilt does not raise. After lower, raise is
+ * locked briefly so the same motion cannot bounce straight back up.
  */
 
 const MIN_G = 6;
@@ -17,6 +18,8 @@ const LOWER_DECAY_TAU_SEC = 0.32;
 const MAX_DT_SEC = 0.05;
 const MIN_DT_SEC = 0.008;
 const DEADZONE_MS2 = 0.45;
+/** After a lower, ignore raise / overhead hold until this many ms pass. */
+export const LW_RAISE_REARM_MS = 550;
 
 let listening = false;
 let pose = 'neutral';
@@ -48,8 +51,8 @@ function lerp(a, b, t) {
  * Map 1–10 producer sliders to raise/lower gesture thresholds.
  * Higher raise = shorter upward travel to turn on.
  * Higher lower = shorter downward travel to turn off.
- * Higher slider = easier (less travel / hold). At 5 / 5, raise needs more
- * travel than lower so a small lift does not fire and a normal drop does.
+ * Higher slider = easier (less travel / hold). Raise stays stricter than
+ * lower at the same slider so a lean does not fire and a normal drop does.
  * @param {number} raiseSensitivity
  * @param {number} lowerSensitivity
  */
@@ -59,15 +62,15 @@ export function lw_thresholdsFromSensitivity(raiseSensitivity, lowerSensitivity)
     const tRaise = (raise - 1) / 9;
     const tLower = (lower - 1) / 9;
     return {
-        enterAngleDeg: lerp(82, 18, tRaise),
-        enterTorchUp: lerp(0.5, 0.06, tRaise),
-        raiseAccel: lerp(2.8, 1.0, tRaise),
-        raiseTravel: lerp(0.85, 0.22, tRaise),
-        raiseHoldMs: lerp(180, 60, tRaise),
-        lowerAccel: lerp(1.5, 0.32, tLower),
-        lowerTravel: lerp(0.48, 0.07, tLower),
-        lowerHoldMs: lerp(140, 28, tLower),
-        orientConfirmMs: lerp(220, 70, tRaise),
+        enterAngleDeg: lerp(105, 62, tRaise),
+        enterTorchUp: lerp(0.88, 0.72, tRaise),
+        raiseAccel: lerp(3.6, 1.5, tRaise),
+        raiseTravel: lerp(1.20, 0.34, tRaise),
+        raiseHoldMs: lerp(260, 80, tRaise),
+        lowerAccel: lerp(1.15, 0.20, tLower),
+        lowerTravel: lerp(0.32, 0.045, tLower),
+        lowerHoldMs: lerp(100, 20, tLower),
+        orientConfirmMs: lerp(360, 160, tRaise),
     };
 }
 
@@ -148,7 +151,7 @@ export function lw_orientationLooksRaised(g, thresholds = liveThresholds) {
  *   gravX: number, gravY: number, gravZ: number,
  *   raiseTravel: number, lowerTravel: number,
  *   raiseHoldMs: number, lowerHoldMs: number, orientHoldMs: number,
- *   lastAngleDeg: number|null, gravReady: boolean,
+ *   lastAngleDeg: number|null, raiseLockMs: number, gravReady: boolean,
  * }}
  */
 export function lw_createPoseState() {
@@ -163,6 +166,7 @@ export function lw_createPoseState() {
         lowerHoldMs: 0,
         orientHoldMs: 0,
         lastAngleDeg: null,
+        raiseLockMs: 0,
         gravReady: false,
         baselineReady: false,
         calibSamples: 0,
@@ -278,8 +282,8 @@ function homeReturnDeg(sample, state) {
     });
     const homeAngle = home.ok ? home.angleDeg : 0;
     if (now.angleDeg + 8 < homeAngle) return 0;
-    if (prev < homeAngle + 28) return 0;
-    return Math.min(8, Math.max(0, prev - now.angleDeg));
+    if (prev < homeAngle + 18) return 0;
+    return Math.min(10, Math.max(0, prev - now.angleDeg));
 }
 
 function finishCalibration(state, thresholds) {
@@ -297,25 +301,18 @@ function finishCalibration(state, thresholds) {
 }
 
 /**
- * Raised vs the captured home hold, or an already-overhead posture.
+ * Already-overhead / inverted. Modest tilts from home do not count —
+ * those were firing raised without a real lift.
  * @param {{ gx: number, gy: number, gz: number }} sample
- * @param {ReturnType<typeof lw_createPoseState>} state
+ * @param {ReturnType<typeof lw_createPoseState>} _state
  * @param {object} thresholds
  */
-export function lw_looksRaisedFromInitial(sample, state, thresholds) {
-    const current = { gx: sample.gx, gy: sample.gy, gz: sample.gz };
-    if (lw_orientationLooksRaised(current, thresholds)) return true;
-    const now = lw_poseMetrics(current);
-    const home = lw_poseMetrics({
-        gx: state.baseGx,
-        gy: state.baseGy,
-        gz: state.baseGz,
-    });
-    if (!now.ok || !home.ok) return false;
-    const needAngle = Number(thresholds.enterAngleDeg) * 0.4 + 6;
-    const needTorch = Number(thresholds.enterTorchUp) * 0.5 + 0.05;
-    return (now.angleDeg - home.angleDeg) >= needAngle
-        || (now.torchUp - home.torchUp) >= needTorch;
+export function lw_looksRaisedFromInitial(sample, _state, thresholds) {
+    return lw_orientationLooksRaised({
+        gx: sample.gx,
+        gy: sample.gy,
+        gz: sample.gz,
+    }, thresholds);
 }
 
 function collectBaseline(state, sample, dtSec) {
@@ -338,9 +335,10 @@ function collectBaseline(state, sample, dtSec) {
 /**
  * Advance the pose tracker by one motion sample.
  * Starts neutral while the first samples capture the home hold, then
- * classifies raised/lowered from that initial position. Raise is a short
- * camera-end lift from home; lower is world-down travel plus rotating
- * back toward the home hold.
+ * classifies raised/lowered from that initial position. Raise needs a
+ * real camera-end lift or a held overhead / inverted pose. Lower is
+ * world-down travel plus rotating back toward the home hold. After a
+ * lower, raise is locked for {@link LW_RAISE_REARM_MS}.
  * @param {ReturnType<typeof lw_createPoseState>} state
  * @param {{ gx: number, gy: number, gz: number, ax?: number, ay?: number, az?: number, dtSec?: number }} sample
  * @param {object} [thresholds]
@@ -365,6 +363,13 @@ export function lw_advancePose(state, sample, thresholds = liveThresholds) {
     if (!nowRaised) {
         state.lowerTravel = 0;
         state.lowerHoldMs = 0;
+        if (state.raiseLockMs > 0) {
+            state.raiseLockMs = Math.max(0, state.raiseLockMs - dtSec * 1000);
+            state.raiseTravel = 0;
+            state.raiseHoldMs = 0;
+            state.orientHoldMs = 0;
+            return state.pose;
+        }
         if (raiseA > thresholds.raiseAccel && raiseA > DEADZONE_MS2) {
             state.raiseTravel += raiseA * dtSec;
             state.raiseHoldMs += dtSec * 1000;
@@ -400,7 +405,7 @@ export function lw_advancePose(state, sample, thresholds = liveThresholds) {
     const closingDeg = homeReturnDeg(sample, state);
     const accelOk = lowerA > Math.max(thresholds.lowerAccel, DEADZONE_MS2);
     if (accelOk || closingDeg > 0.35) {
-        state.lowerTravel += lowerA * dtSec + closingDeg * 0.014;
+        state.lowerTravel += lowerA * dtSec + closingDeg * 0.018;
         state.lowerHoldMs += dtSec * 1000;
     } else {
         state.lowerTravel = decayLowerTravel(state.lowerTravel, dtSec);
@@ -411,6 +416,7 @@ export function lw_advancePose(state, sample, thresholds = liveThresholds) {
         state.lowerTravel = 0;
         state.lowerHoldMs = 0;
         state.lastAngleDeg = null;
+        state.raiseLockMs = LW_RAISE_REARM_MS;
     }
     return state.pose;
 }

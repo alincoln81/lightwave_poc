@@ -80,7 +80,7 @@ async function handleCue(cue) {
     const torchMax = Number(cue.lw_torchMaxMs);
     const countdownSec = Number(cue.lw_countdownSeconds);
     lw_torchConfigure({
-        maxMs: Number.isFinite(torchMax) ? torchMax : 3000,
+        maxMs: Number.isFinite(torchMax) ? torchMax : 3500,
         requireRaise: cue.lw_requireRaise !== false,
         offOnlyAtMax: cue.lw_offOnlyAtMax === true,
     });
@@ -96,7 +96,7 @@ async function handleCue(cue) {
         goTimer = null;
         await lw_torchSetRaised(lw_getPose() === 'raised');
         await lw_torchSetGoActive(true);
-        const windowMs = Number.isFinite(torchMax) ? torchMax : 3000;
+        const windowMs = Number.isFinite(torchMax) ? torchMax : 3500;
         endTimer = setTimeout(() => {
             endGoWindow();
         }, windowMs);

@@ -4,6 +4,7 @@ import { lw_shouldTorchBeOn, lw_pickFollowOffMs } from '../public/js/lw_torch.js
 import {
     lw_advancePose,
     lw_createPoseState,
+    LW_RAISE_REARM_MS,
     lw_orientationLooksRaised,
     lw_thresholdsFromSensitivity,
 } from '../public/js/lw_pose.js';
@@ -228,7 +229,7 @@ describe('lw_advancePose', () => {
         const blipState = primedState('raised');
         const dropState = primedState('raised');
         const easyState = primedState('raised');
-        assert.equal(drivePose(blipState, extreme, uprightSample({ ay: -2.2 }), 6), 'raised');
+        assert.equal(drivePose(blipState, extreme, uprightSample({ ay: -1.0 }), 6), 'raised');
         assert.equal(drivePose(dropState, extreme, uprightSample({ ay: -4.2 }), 20), 'lowered');
         assert.equal(drivePose(easyState, easyLower, uprightSample({ ay: -4.2 }), 8), 'lowered');
     });
@@ -251,20 +252,31 @@ describe('lw_advancePose', () => {
         assert.equal(pose, 'lowered');
     });
 
-    it('treats a subtle tilt posture as raised only when raise sensitivity is high', () => {
-        const deg = 25 * (Math.PI / 180);
+    it('does not treat a modest tilt as raised', () => {
+        const deg = 35 * (Math.PI / 180);
         const tilt = uprightSample({
             gy: -9.8 * Math.cos(deg),
             gz: 9.8 * Math.sin(deg),
         });
         const easy = lw_thresholdsFromSensitivity(10, 2);
-        const hard = lw_thresholdsFromSensitivity(1, 2);
-        assert.equal(lw_orientationLooksRaised(tilt, easy), true);
-        assert.equal(lw_orientationLooksRaised(tilt, hard), false);
+        const mid = lw_thresholdsFromSensitivity(5, 5);
+        assert.equal(lw_orientationLooksRaised(tilt, easy), false);
+        assert.equal(lw_orientationLooksRaised(tilt, mid), false);
         const easyState = lw_createPoseState();
-        const hardState = lw_createPoseState();
-        assert.equal(drivePose(easyState, easy, tilt, 12), 'raised');
-        assert.equal(drivePose(hardState, hard, tilt, 12), 'lowered');
+        assert.equal(drivePose(easyState, easy, tilt, 20), 'lowered');
+    });
+
+    it('blocks raise until the rearm delay after a lower', () => {
+        const easy = lw_thresholdsFromSensitivity(10, 10);
+        const state = primedState('raised');
+        assert.equal(drivePose(state, easy, uprightSample({ ay: -4.2 }), 16), 'lowered');
+        assert.ok(state.raiseLockMs > 0);
+        assert.ok(state.raiseLockMs <= LW_RAISE_REARM_MS);
+        assert.equal(drivePose(state, easy, uprightSample({ ay: 3.2 }), 8), 'lowered');
+        const lockSamples = Math.ceil(LW_RAISE_REARM_MS / 20) + 2;
+        assert.equal(drivePose(state, easy, uprightSample(), lockSamples), 'lowered');
+        assert.equal(state.raiseLockMs, 0);
+        assert.equal(drivePose(state, easy, uprightSample({ ay: 3.2 }), 8), 'raised');
     });
 });
 

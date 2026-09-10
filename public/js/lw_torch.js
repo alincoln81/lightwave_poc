@@ -12,8 +12,8 @@ let requireRaise = true;
 let offOnlyAtMax = false;
 let followPose = false;
 let offOnLower = true;
-let maxMs = 3000;
-let minMs = 20000;
+let maxMs = 3500;
+let minMs = 2000;
 let followOffMs = null;
 let torchOnAt = null;
 let desiredOn = false;
@@ -27,7 +27,7 @@ let capTimer = null;
 export function lw_pickFollowOffMs(min, max) {
     const a = Math.round(Number(min));
     const b = Math.round(Number(max));
-    const first = Number.isFinite(a) ? a : 20000;
+    const first = Number.isFinite(a) ? a : 2000;
     const second = Number.isFinite(b) ? b : first;
     const lo = Math.min(first, second);
     const hi = Math.max(first, second);
@@ -55,13 +55,13 @@ export function lw_shouldTorchBeOn({
 }) {
     if (poseOnly) {
         if (dropTurnsOff) return !!isRaised;
-        const limit = Number.isFinite(cap) ? cap : 3000;
+        const limit = Number.isFinite(cap) ? cap : 3500;
         if (Number.isFinite(elapsedMs) && elapsedMs >= limit) return false;
         if (isRaised) return true;
         return !!latched;
     }
     if (!go) return false;
-    const limit = Number.isFinite(cap) ? cap : 3000;
+    const limit = Number.isFinite(cap) ? cap : 3500;
     if (Number.isFinite(elapsedMs) && elapsedMs >= limit) return false;
     if (needRaise === false) return true;
     if (useFallback) return true;
@@ -178,8 +178,8 @@ export function lw_torchReset() {
     offOnlyAtMax = false;
     followPose = false;
     offOnLower = true;
-    maxMs = 3000;
-    minMs = 20000;
+    maxMs = 3500;
+    minMs = 2000;
     followOffMs = null;
     torchOnAt = null;
     desiredOn = false;

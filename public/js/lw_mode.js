@@ -36,7 +36,7 @@ import {
 import { lw_waveStart, lw_waveSetSection, lw_waveReset, lw_waveSetFollowPose } from './lw_wave.js';
 
 export const LW_DEFAULTS = {
-    lw_torchMaxMs: 3000,
+    lw_torchMaxMs: 3500,
     lw_countdownSeconds: 3,
     lw_sectionDelayMs: 400,
     lw_waitingText: "You're in section {section}. Get ready.",
@@ -48,7 +48,7 @@ export const LW_DEFAULTS = {
     lw_loop: false,
     lw_followPose: false,
     lw_offOnLower: true,
-    lw_torchMinMs: 20000,
+    lw_torchMinMs: 2000,
     lw_joinedText: 'Watch for your cue to raise your device!',
     lw_waveCompleteText: 'Wave Complete',
 };

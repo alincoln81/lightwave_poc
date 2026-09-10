@@ -278,7 +278,7 @@ async function setSettings(data, firestoreRoot, type) {
       const lwTorch = Number(data.lw_torchMaxMs);
       settings.lw_torchMaxMs = Number.isFinite(lwTorch)
         ? Math.min(120000, Math.max(200, Math.round(lwTorch)))
-        : (settings.lw_torchMaxMs ?? 3000);
+        : (settings.lw_torchMaxMs ?? 3500);
       const lwCount = Number(data.lw_countdownSeconds);
       settings.lw_countdownSeconds = Number.isFinite(lwCount)
         ? Math.min(10, Math.max(1, Math.round(lwCount)))
@@ -290,7 +290,7 @@ async function setSettings(data, firestoreRoot, type) {
       const lwTorchMin = Number(data.lw_torchMinMs);
       settings.lw_torchMinMs = Number.isFinite(lwTorchMin)
         ? Math.min(120000, Math.max(200, Math.round(lwTorchMin)))
-        : (settings.lw_torchMinMs ?? 20000);
+        : (settings.lw_torchMinMs ?? 2000);
       settings.lw_waitingText = (typeof data.lw_waitingText === 'string' && data.lw_waitingText.trim())
         ? data.lw_waitingText.trim()
         : (settings.lw_waitingText || "You're in section {section}. Get ready.");

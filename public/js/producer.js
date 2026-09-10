@@ -1854,10 +1854,10 @@ function syncLwProducerUi() {
     if (loopWave) loopWave.checked = session.settings.lw_loop === true;
     if (countdown) countdown.value = String(session.settings.lw_countdownSeconds ?? 3);
     if (delay) delay.value = String(session.settings.lw_sectionDelayMs ?? 400);
-    const maxValue = String(session.settings.lw_torchMaxMs ?? 3000);
+    const maxValue = String(session.settings.lw_torchMaxMs ?? LW_DEFAULTS.lw_torchMaxMs);
     if (torchMax) torchMax.value = maxValue;
     if (torchMaxFollow) torchMaxFollow.value = maxValue;
-    if (torchMin) torchMin.value = String(session.settings.lw_torchMinMs ?? 20000);
+    if (torchMin) torchMin.value = String(session.settings.lw_torchMinMs ?? LW_DEFAULTS.lw_torchMinMs);
     if (waiting) waiting.value = session.settings.lw_waitingText || LW_DEFAULTS.lw_waitingText;
     if (joined) joined.value = session.settings.lw_joinedText || LW_DEFAULTS.lw_joinedText;
     if (complete) complete.value = session.settings.lw_waveCompleteText || LW_DEFAULTS.lw_waveCompleteText;

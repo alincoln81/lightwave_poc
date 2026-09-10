@@ -109,7 +109,7 @@ function lw_buildSchedule(occupied, { epoch, delayMs, countdownMs = 0 } = {}) {
  * @returns {string|null}
  */
 function lw_activeSectionAt(schedule, now, torchMaxMs) {
-    const cap = Number.isFinite(torchMaxMs) ? torchMaxMs : 3000;
+    const cap = Number.isFinite(torchMaxMs) ? torchMaxMs : 3500;
     const rows = Array.isArray(schedule) ? schedule : [];
     let active = null;
     let latestGo = -Infinity;
@@ -161,7 +161,7 @@ function lw_startWave(io, token, timing = {}) {
     const torchMax = Number(timing.lw_torchMaxMs);
     const countdownSeconds = Number(timing.lw_countdownSeconds);
     const delayMs = Number(timing.lw_sectionDelayMs);
-    const lw_torchMaxMs = Number.isFinite(torchMax) ? torchMax : 3000;
+    const lw_torchMaxMs = Number.isFinite(torchMax) ? torchMax : 3500;
     const lw_countdownSeconds = Number.isFinite(countdownSeconds) ? countdownSeconds : 3;
     const lw_sectionDelayMs = Number.isFinite(delayMs) ? delayMs : 400;
     const lw_requireRaise = timing.lw_requireRaise !== false;
